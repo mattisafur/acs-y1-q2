@@ -1,3 +1,7 @@
+# generated during project creation
 build/
 sdkconfig
 sdkconfig.old
+
+# added manually
+.vscode
