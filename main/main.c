@@ -34,7 +34,7 @@ void app_main(void)
     ESP_LOGI(LOG_TAG, "Adding I2C Device to Master Bus");
     i2c_master_dev_handle_t i2c_device_handle;
     i2c_device_config_t dev_config = {
-        .dev_addr_length = NULL, // TODO find value
+        .dev_addr_length = 7, // TODO find value
         .device_address = TOF400C_VL53L0X_ADDR,
         .scl_speed_hz = TOF400C_VL53L0X_SCL_FREQ_HZ
         // .scl_wait_us
