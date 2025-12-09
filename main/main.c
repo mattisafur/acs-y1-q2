@@ -6,6 +6,9 @@
 
 #define LOG_TAG "MAIN"
 
+#define MPU_6050_I2C_ADDR 0x68
+#define MPU_6050_I2C_SCL_SPEED_HZ 400000
+
 void app_main(void)
 {
     esp_err_t err;
@@ -28,17 +31,17 @@ void app_main(void)
     ESP_ERROR_CHECK(err);
     ESP_LOGI(LOG_TAG, "initialized i2c master");
 
-    i2c_master_dev_handle_t i2c_device_1_handle;
-    i2c_device_config_t i2c_device_1_config = {
+    i2c_master_dev_handle_t i2c_mpu_6050_handle;
+    i2c_device_config_t i2c_mpu_6050_config = {
         .dev_addr_length = 7, // TODO find value
-        .device_address = 0x68,
-        .scl_speed_hz = 100000
+        .device_address = MPU_6050_I2C_ADDR,
+        .scl_speed_hz = MPU_6050_I2C_SCL_SPEED_HZ,
         // .scl_wait_us
         // .flags = {
         //     .disable_ack_check
         // }
     };
-    err = i2c_master_bus_add_device(i2c_master_handle, &i2c_device_1_config, &i2c_device_1_handle);
+    err = i2c_master_bus_add_device(i2c_master_handle, &i2c_mpu_6050_config, &i2c_mpu_6050_handle);
     ESP_ERROR_CHECK(err);
     ESP_LOGI(LOG_TAG, "initialized i2c device 1");
 
