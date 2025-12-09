@@ -5,7 +5,7 @@
 
 #define LOG_TAG "MAIN"
 
-#define TOF400C_VL53L0X_ADDR 0x52
+#define HW_290_ADDR 0x52
 #define TOF400C_VL53L0X_SCL_FREQ_HZ 400000
 
 void app_main(void)
@@ -35,7 +35,7 @@ void app_main(void)
     i2c_master_dev_handle_t i2c_device_handle;
     i2c_device_config_t dev_config = {
         .dev_addr_length = 7, // TODO find value
-        .device_address = TOF400C_VL53L0X_ADDR,
+        .device_address = HW_290_ADDR,
         .scl_speed_hz = TOF400C_VL53L0X_SCL_FREQ_HZ
         // .scl_wait_us
         // .flags = {
