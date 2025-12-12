@@ -8,7 +8,7 @@
 
 #define TAG "CardReader"
 
-#define BLINK_GPIO GPIO_NUM_23
+#define BEEP_GPIO GPIO_NUM_23
 // UART configuration
 #define RFID_UART_NUM UART_NUM_2
 #define RFID_TX_PIN (GPIO_NUM_17) // not connected to reader, just required by driver
@@ -32,11 +32,11 @@ static void rfid_task(void *arg)
     while (1)
     {
         // Wait up to 1000 ms for data
-        int len = uart_read_bytes(RFID_UART_NUM, data, APP_BUF_SIZE - 1, pdMS_TO_TICKS(200));
+        int len = uart_read_bytes(RFID_UART_NUM, data, APP_BUF_SIZE - 1, pdMS_TO_TICKS(100));
 
         if (len > 0)
         {
-            gpio_set_level(BLINK_GPIO, 1);
+            gpio_set_level(BEEP_GPIO, 1);
             data[12] = '\0';
             // Print HEX for debugging
             printf("HEX: ");
@@ -60,11 +60,29 @@ static void rfid_task(void *arg)
                 }
                 else
                 {
+                    
                     ESP_LOGI(TAG, "RFID TAG INCORRECT!");
+                    gpio_set_level(BEEP_GPIO, 0);
+                    vTaskDelay(pdMS_TO_TICKS(1000));
+                    gpio_set_level(BEEP_GPIO, 1);
+                    vTaskDelay(pdMS_TO_TICKS(50));
+                    gpio_set_level(BEEP_GPIO, 0);
+                    vTaskDelay(pdMS_TO_TICKS(10000));
+
+                    for(int i = 500; i > 10; i-=25)
+                    {
+                        gpio_set_level(BEEP_GPIO, 1);
+                        vTaskDelay(pdMS_TO_TICKS(50));
+                        gpio_set_level(BEEP_GPIO, 0);
+                        vTaskDelay(pdMS_TO_TICKS(i));
+                    }
+                    gpio_set_level(BEEP_GPIO, 1);
+                    vTaskDelay(pdMS_TO_TICKS(1000));
+                    gpio_set_level(BEEP_GPIO, 0);
                 }
             }
-            vTaskDelay(pdMS_TO_TICKS(200));
-            gpio_set_level(BLINK_GPIO, 0);
+            vTaskDelay(pdMS_TO_TICKS(100));
+            gpio_set_level(BEEP_GPIO, 0);
 
             while (len > 0)
             {
@@ -77,14 +95,14 @@ static void rfid_task(void *arg)
 void app_main(void)
 {
     gpio_config_t led_conf = {
-        .pin_bit_mask = 1ULL << BLINK_GPIO,
+        .pin_bit_mask = 1ULL << BEEP_GPIO,
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = 1,
         .pull_down_en = 0,
         .intr_type = GPIO_INTR_DISABLE
     };
     gpio_config(&led_conf);
-    gpio_set_level(BLINK_GPIO, 0); 
+    gpio_set_level(BEEP_GPIO, 0); 
     // UART configuration
     uart_config_t uart_config = {
         .baud_rate = RFID_BAUD_RATE,
