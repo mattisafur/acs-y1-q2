@@ -3,8 +3,16 @@ dependencies:
     source:
       type: idf
     version: 5.5.1
+  saleca/vl53l1x_uld_esp_wrapper:
+    component_hash: c72422aaa58897428c497e2ff5ffcaa0f1a65a70b65fadcc680ae7b906bdf438
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.0.6
 direct_dependencies:
 - idf
-manifest_hash: e44bf68eca6b7b264ddae08cd014cd3294c0473230381b6d6f88ed18ec879038
+- saleca/vl53l1x_uld_esp_wrapper
+manifest_hash: 117a835027ae12636dd55b9eea3e380c0957833ec9e0c196bbcb6308ac5e770e
 target: esp32
 version: 2.0.0

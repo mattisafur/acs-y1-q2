@@ -8,8 +8,8 @@
 static const char *TAG = "VL53L1X_EXAMPLE";
 static const size_t FPS = 1000 / 3;
 
-static const gpio_num_t SCL_GPIO = GPIO_NUM_22;
-static const gpio_num_t SDA_GPIO = GPIO_NUM_21;
+static const gpio_num_t SCL_GPIO = GPIO_NUM_5;
+static const gpio_num_t SDA_GPIO = GPIO_NUM_6;
 
 vl53l1x_handle_t vl53l1x_handle = VL53L1X_INIT;
 vl53l1x_device_handle_t vl53l1x_device = VL53L1X_DEVICE_INIT;
