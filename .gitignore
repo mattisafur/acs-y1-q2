@@ -5,3 +5,4 @@ sdkconfig.old
 
 # added manually
 .vscode
+managed_components/
