@@ -3,7 +3,6 @@
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <mpu6050.h>
-#include <stdio.h>
 
 #include "include/i2c_addrs.h"
 #include "include/pin_defs.h"
@@ -85,7 +84,7 @@ void init_card_reader()
 
 void init_accelerometer()
 {
-    ESP_ERROR_CHECK(mpu6050_init_desc(&accelerometer_dev, I2C_ADDR_MPU6050, PIN_I2C_SDA, PIN_I2C_SCL));
+    ESP_ERROR_CHECK(mpu6050_init_desc(&accelerometer_dev, I2C_ADDR_MPU6050, I2C_NUM, PIN_I2C_SDA, PIN_I2C_SCL));
 
     for (;;)
     {
