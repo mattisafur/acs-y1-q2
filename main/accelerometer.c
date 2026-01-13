@@ -78,9 +78,11 @@ static void accelerometer_task_handler(void *)
             switch (msg)
             {
             case MESSAGE_ENABLE:
+                accelerometer_enabled = true;
                 break;
 
             case MESSAGE_DISABLE:
+                accelerometer_enabled = false;
                 break;
 
             default:
