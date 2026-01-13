@@ -55,8 +55,6 @@ static void buzzer_task_handler(void *)
         case MESSAGE_BUZZER_CARD_INVALID:
             xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_STOP, portMAX_DELAY);
 
-            // BEEP
-
             xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_START, portMAX_DELAY);
             break;
 
@@ -128,7 +126,7 @@ esp_err_t buzzer_init(void)
         goto cleanup_gpio;
     }
 
-    const BaseType_t rtos_ret = xTaskCreate(alarm_task_handler, "Buzzer Alarm", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &alarm_task_handle);
+    rtos_ret = xTaskCreate(alarm_task_handler, "Buzzer Alarm", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &alarm_task_handle);
     if (rtos_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to create alarm task with error code: %d", rtos_ret);
