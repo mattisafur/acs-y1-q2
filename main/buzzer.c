@@ -55,6 +55,19 @@ static void buzzer_task_handler(void *)
         case MESSAGE_BUZZER_CARD_INVALID:
             xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_STOP, portMAX_DELAY);
 
+            gpio_set_level(PIN_BUZZER, 1);
+            vTaskDelay(pdMS_TO_TICKS(50));
+            gpio_set_level(PIN_BUZZER, 0);
+            vTaskDelay(pdMS_TO_TICKS(50));
+            gpio_set_level(PIN_BUZZER, 1);
+            vTaskDelay(pdMS_TO_TICKS(50));
+            gpio_set_level(PIN_BUZZER, 0);
+            vTaskDelay(pdMS_TO_TICKS(50));
+            gpio_set_level(PIN_BUZZER, 1);
+            vTaskDelay(pdMS_TO_TICKS(50));
+            gpio_set_level(PIN_BUZZER, 0);
+            vTaskDelay(pdMS_TO_TICKS(50));
+
             xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_START, portMAX_DELAY);
             break;
 
