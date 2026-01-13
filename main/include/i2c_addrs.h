@@ -1,5 +1,0 @@
-#pragma once
-
-#define I2C_ADDR_TOF400C_VL53L0X 0x52
-#define I2C_ADDR_MPU6050 0x68
-#define I2C_ADDR_HMC5883 0x1E
