@@ -6,7 +6,7 @@
 #include "esp_log.h"
 
 static const char *TAG = "VL53L1X_EXAMPLE";
-static const size_t FPS = 1000 / 3;
+static const size_t FPS = 1000 / 30;
 
 static const gpio_num_t SCL_GPIO = GPIO_NUM_22;
 static const gpio_num_t SDA_GPIO = GPIO_NUM_21;
