@@ -110,7 +110,7 @@ static void accelerometer_task_handler(void *)
                     .component = COMPONENT_ACCELEROMETER,
                     .message = MESSAGE_SENSOR_TRIGGERED,
                 };
-                xQueueSendToBack(queue_task_return_handle, (void *)&alarm_message, portMAX_DELAY);
+                xQueueSendToBack(queue_task_return_handle, &alarm_message, portMAX_DELAY);
             }
 
             metric_t metric_acceleration_x = {
