@@ -33,7 +33,7 @@ typedef enum component_t
 
 typedef struct orchastrator_return_message_t
 {
-    component_t task;
+    component_t component;
     message_t message;
 } orchastrator_return_message_t;
 

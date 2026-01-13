@@ -91,29 +91,29 @@ static void buzzer_task_handler(void *)
         switch (msg)
         {
         case MESSAGE_BUZZER_ALARM_START:
-            xQueueSendToFront(alarm_queue_handle, ALARM_QUEUE_MESSAGE_START, portMAX_DELAY);
+            xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_START, portMAX_DELAY);
             break;
 
         case MESSAGE_BUZZER_ALARM_STOP:
-            xQueueSendToFront(alarm_queue_handle, ALARM_QUEUE_MESSAGE_STOP, portMAX_DELAY);
+            xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_STOP, portMAX_DELAY);
             break;
 
         case MESSAGE_BUZZER_CARD_VALID:
-            xQueueSendToFront(alarm_queue_handle, ALARM_QUEUE_MESSAGE_STOP, portMAX_DELAY);
+            xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_STOP, portMAX_DELAY);
 
             gpio_set_level(PIN_BUZZER, 1);
             vTaskDelay(pdMS_TO_TICKS(150));
             gpio_set_level(PIN_BUZZER, 0);
 
-            xQueueSendToFront(alarm_queue_handle, ALARM_QUEUE_MESSAGE_START, portMAX_DELAY);
+            xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_START, portMAX_DELAY);
             break;
 
         case MESSAGE_BUZZER_CARD_INVALID:
-            xQueueSendToFront(alarm_queue_handle, ALARM_QUEUE_MESSAGE_STOP, portMAX_DELAY);
+            xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_STOP, portMAX_DELAY);
 
             // BEEP
 
-            xQueueSendToFront(alarm_queue_handle, ALARM_QUEUE_MESSAGE_START, portMAX_DELAY);
+            xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_START, portMAX_DELAY);
             break;
 
         default:
