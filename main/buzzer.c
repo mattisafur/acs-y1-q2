@@ -5,6 +5,7 @@
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 
+#include "app_config.h"
 #include "queue.h"
 
 #define PIN_BUZZER GPIO_NUM_12
@@ -13,6 +14,14 @@ static const char *TAG = "BUZZER";
 
 static TaskHandle_t buzzer_task_handle;
 static TaskHandle_t alarm_task_handle;
+
+static QueueHandle_t alarm_queue_handle;
+
+typedef enum alarm_task_queue_message_t
+{
+    ALARM_TASK_QUEUE_MESSAGE_START,
+    ALARM_TASK_QUEUE_MESSAGE_STOP,
+} alarm_task_queue_message_t;
 
 esp_err_t buzzer_init(void)
 {
@@ -40,20 +49,29 @@ esp_err_t buzzer_init(void)
     BaseType_t rtos_ret = xTaskCreate(buzzer_task_handler, "Buzzer", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &buzzer_task_handle);
     if (rtos_ret != pdPASS)
     {
-        ESP_LOGE(TAG, "Failed to create task with error code: %d", rtos_ret);
+        ESP_LOGE(TAG, "Failed to create buzzer task with error code: %d", rtos_ret);
         esp_ret = ESP_FAIL;
         goto cleanup_gpio;
     }
 
-    rtos_ret = alarm_task_init();
+    const BaseType_t rtos_ret = xTaskCreate(alarm_task_handler, "Buzzer Alarm", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &alarm_task_handle);
     if (rtos_ret != pdPASS)
     {
-        ESP_LOGE(TAG, "Failed to initialize alarm task with error code: %d", rtos_ret);
-        goto cleanup_buzzer_task;
+        ESP_LOGE(TAG, "Failed to create alarm task with error code: %d", rtos_ret);
+        return rtos_ret;
+    }
+
+    alarm_queue_handle = xQueueCreate(APP_CONFIG_QUEUE_SIZE_ITEMS, sizeof(alarm_task_queue_message_t));
+    if (alarm_queue_handle == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to initialize alarm queue");
+        goto cleanup_alarm_task;
     }
 
     return ESP_OK;
 
+cleanup_alarm_task:
+    vTaskDelete(alarm_task_handle);
 cleanup_buzzer_task:
     vTaskDelete(buzzer_task_handle);
 cleanup_gpio:
@@ -67,43 +85,33 @@ static void buzzer_task_handler(void *)
     {
         queue_task_message_t msg;
         const BaseType_t ret = xQueueReceive(queue_buzzer_handle, &msg, portMAX_DELAY);
-        if (ret != pdPASS)
-        {
-            ESP_LOGE(TAG, "Failed to receive message from queue with error code: %d, suspending task.", ret);
-            vTaskSuspend(NULL); // suspend this task
-            continue;
-        }
 
         switch (msg)
         {
         case QUEUE_MESSAGE_BUZZER_ALARM_START:
-            vTaskResume(alarm_task_handle);
+            xQueueSendToFront(alarm_queue_handle, ALARM_TASK_QUEUE_MESSAGE_START, portMAX_DELAY);
             break;
 
         case QUEUE_MESSAGE_BUZZER_ALARM_STOP:
-            vTaskSuspend(alarm_task_handle);
+            xQueueSendToFront(alarm_queue_handle, ALARM_TASK_QUEUE_MESSAGE_STOP, portMAX_DELAY);
             break;
 
         case QUEUE_MESSAGE_BUZZER_BEEP_CARD_VALID:
-            bool alarm_running = eTaskGetState(alarm_task_handle) != eSuspended;
-            if (alarm_running)
-                vTaskSuspend(alarm_task_handle);
+            xQueueSendToFront(alarm_queue_handle, ALARM_TASK_QUEUE_MESSAGE_STOP, portMAX_DELAY);
 
-            // BEEP
+            gpio_set_level(PIN_BUZZER, 1);
+            vTaskDelay(pdMS_TO_TICKS(150));
+            gpio_set_level(PIN_BUZZER, 0);
 
-            if (alarm_running)
-                vTaskResume(alarm_task_handle);
+            xQueueSendToFront(alarm_queue_handle, ALARM_TASK_QUEUE_MESSAGE_START, portMAX_DELAY);
             break;
 
         case QUEUE_MESSAGE_BUZZER_BEEP_CARD_INVALID:
-            bool alarm_running = eTaskGetState(alarm_task_handle) != eSuspended;
-            if (alarm_running)
-                vTaskSuspend(alarm_task_handle);
+            xQueueSendToFront(alarm_queue_handle, ALARM_TASK_QUEUE_MESSAGE_STOP, portMAX_DELAY);
 
             // BEEP
 
-            if (alarm_running)
-                vTaskResume(alarm_task_handle);
+            xQueueSendToFront(alarm_queue_handle, ALARM_TASK_QUEUE_MESSAGE_START, portMAX_DELAY);
             break;
 
         default:
@@ -113,21 +121,32 @@ static void buzzer_task_handler(void *)
     }
 }
 
-static BaseType_t alarm_task_init(void)
-{
-    const BaseType_t ret = xTaskCreate(alarm_task_handler, "Buzzer Alarm", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &alarm_task_handle);
-    if (ret != pdPASS)
-    {
-        ESP_LOGE(TAG, "Failed to create task with error code: %d", ret);
-        return ret;
-    }
-
-    vTaskSuspend(alarm_task_handle);
-
-    return pdPASS;
-}
-
 static void alarm_task_handler(void *)
 {
-    // make alarm sounds
+    for (;;)
+    {
+        queue_task_message_t msg;
+        const BaseType_t ret = xQueueReceive(queue_buzzer_handle, &msg, 0);
+
+        if (ret != errQUEUE_EMPTY)
+        {
+            switch (msg)
+            {
+            case ALARM_TASK_QUEUE_MESSAGE_START:
+                gpio_set_level(PIN_BUZZER, 1);
+                vTaskDelay(pdMS_TO_TICKS(50));
+                gpio_set_level(PIN_BUZZER, 0);
+                vTaskDelay(pdMS_TO_TICKS(100));
+                break;
+
+            case ALARM_TASK_QUEUE_MESSAGE_STOP:
+                vTaskDelay(pdMS_TO_TICKS(10));
+                break;
+
+            default:
+                ESP_LOGE(TAG, "Received invalid message from queue, message num: %d", msg);
+                break;
+            }
+        }
+    }
 }
