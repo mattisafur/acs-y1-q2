@@ -2,6 +2,8 @@
 
 #include "app_config.h"
 
+#define QUEUE_SIZE_ITEMS 16
+
 static const char *TAG = "QUEUE";
 
 QueueHandle_t queue_task_return_handle;
@@ -13,10 +15,10 @@ QueueHandle_t queue_metric_handle;
 
 void queue_init(void)
 {
-    queue_task_return_handle = xQueueCreate(APP_CONFIG_QUEUE_SIZE_ITEMS, sizeof(queue_task_message_t));
-    queue_card_reader_handle = xQueueCreate(APP_CONFIG_QUEUE_SIZE_ITEMS, sizeof(queue_task_message_t));
-    queue_buzzer_handle = xQueueCreate(APP_CONFIG_QUEUE_SIZE_ITEMS, sizeof(queue_task_message_t));
-    queue_accelerometer_handle = xQueueCreate(APP_CONFIG_QUEUE_SIZE_ITEMS, sizeof(queue_task_message_t));
-    queue_time_of_flight_handle = xQueueCreate(APP_CONFIG_QUEUE_SIZE_ITEMS, sizeof(queue_task_message_t));
-    queue_metric_handle = xQueueCreate(APP_CONFIG_QUEUE_SIZE_ITEMS, sizeof(queue_metric_message_t));
+    queue_task_return_handle = xQueueCreate(QUEUE_SIZE_ITEMS, sizeof(orchastrator_return_message_t));
+    queue_card_reader_handle = xQueueCreate(QUEUE_SIZE_ITEMS, sizeof(message_t));
+    queue_buzzer_handle = xQueueCreate(QUEUE_SIZE_ITEMS, sizeof(message_t));
+    queue_accelerometer_handle = xQueueCreate(QUEUE_SIZE_ITEMS, sizeof(message_t));
+    queue_time_of_flight_handle = xQueueCreate(QUEUE_SIZE_ITEMS, sizeof(message_t));
+    queue_metric_handle = xQueueCreate(QUEUE_SIZE_ITEMS, sizeof(metric_t));
 }

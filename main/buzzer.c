@@ -6,10 +6,11 @@
 #include <freertos/queue.h>
 #include <freertos/task.h>
 
-#include "app_config.h"
 #include "queue.h"
 
 #define PIN_BUZZER GPIO_NUM_12
+
+#define ALARM_QUEUE_SIZE_ITEMS 16
 
 static const char *TAG = "BUZZER";
 
@@ -18,11 +19,11 @@ static TaskHandle_t alarm_task_handle;
 
 static QueueHandle_t alarm_queue_handle;
 
-typedef enum alarm_task_queue_message_t
+typedef enum alarm_queue_message_t
 {
-    ALARM_TASK_QUEUE_MESSAGE_START,
-    ALARM_TASK_QUEUE_MESSAGE_STOP,
-} alarm_task_queue_message_t;
+    ALARM_QUEUE_MESSAGE_START,
+    ALARM_QUEUE_MESSAGE_STOP,
+} alarm_queue_message_t;
 
 esp_err_t buzzer_init(void)
 {
@@ -62,7 +63,7 @@ esp_err_t buzzer_init(void)
         return rtos_ret;
     }
 
-    alarm_queue_handle = xQueueCreate(APP_CONFIG_QUEUE_SIZE_ITEMS, sizeof(alarm_task_queue_message_t));
+    alarm_queue_handle = xQueueCreate(ALARM_QUEUE_SIZE_ITEMS, sizeof(alarm_queue_message_t));
     if (alarm_queue_handle == NULL)
     {
         ESP_LOGE(TAG, "Failed to initialize alarm queue");
@@ -84,35 +85,35 @@ static void buzzer_task_handler(void *)
 {
     for (;;)
     {
-        queue_task_message_t msg;
+        message_t msg;
         const BaseType_t ret = xQueueReceive(queue_buzzer_handle, &msg, portMAX_DELAY);
 
         switch (msg)
         {
-        case QUEUE_MESSAGE_BUZZER_ALARM_START:
-            xQueueSendToFront(alarm_queue_handle, ALARM_TASK_QUEUE_MESSAGE_START, portMAX_DELAY);
+        case MESSAGE_BUZZER_ALARM_START:
+            xQueueSendToFront(alarm_queue_handle, ALARM_QUEUE_MESSAGE_START, portMAX_DELAY);
             break;
 
-        case QUEUE_MESSAGE_BUZZER_ALARM_STOP:
-            xQueueSendToFront(alarm_queue_handle, ALARM_TASK_QUEUE_MESSAGE_STOP, portMAX_DELAY);
+        case MESSAGE_BUZZER_ALARM_STOP:
+            xQueueSendToFront(alarm_queue_handle, ALARM_QUEUE_MESSAGE_STOP, portMAX_DELAY);
             break;
 
-        case QUEUE_MESSAGE_BUZZER_BEEP_CARD_VALID:
-            xQueueSendToFront(alarm_queue_handle, ALARM_TASK_QUEUE_MESSAGE_STOP, portMAX_DELAY);
+        case MESSAGE_BUZZER_CARD_VALID:
+            xQueueSendToFront(alarm_queue_handle, ALARM_QUEUE_MESSAGE_STOP, portMAX_DELAY);
 
             gpio_set_level(PIN_BUZZER, 1);
             vTaskDelay(pdMS_TO_TICKS(150));
             gpio_set_level(PIN_BUZZER, 0);
 
-            xQueueSendToFront(alarm_queue_handle, ALARM_TASK_QUEUE_MESSAGE_START, portMAX_DELAY);
+            xQueueSendToFront(alarm_queue_handle, ALARM_QUEUE_MESSAGE_START, portMAX_DELAY);
             break;
 
-        case QUEUE_MESSAGE_BUZZER_BEEP_CARD_INVALID:
-            xQueueSendToFront(alarm_queue_handle, ALARM_TASK_QUEUE_MESSAGE_STOP, portMAX_DELAY);
+        case MESSAGE_BUZZER_CARD_INVALID:
+            xQueueSendToFront(alarm_queue_handle, ALARM_QUEUE_MESSAGE_STOP, portMAX_DELAY);
 
             // BEEP
 
-            xQueueSendToFront(alarm_queue_handle, ALARM_TASK_QUEUE_MESSAGE_START, portMAX_DELAY);
+            xQueueSendToFront(alarm_queue_handle, ALARM_QUEUE_MESSAGE_START, portMAX_DELAY);
             break;
 
         default:
@@ -126,21 +127,21 @@ static void alarm_task_handler(void *)
 {
     for (;;)
     {
-        queue_task_message_t msg;
+        alarm_queue_message_t msg;
         const BaseType_t ret = xQueueReceive(queue_buzzer_handle, &msg, 0);
 
         if (ret != errQUEUE_EMPTY)
         {
             switch (msg)
             {
-            case ALARM_TASK_QUEUE_MESSAGE_START:
+            case ALARM_QUEUE_MESSAGE_START:
                 gpio_set_level(PIN_BUZZER, 1);
                 vTaskDelay(pdMS_TO_TICKS(50));
                 gpio_set_level(PIN_BUZZER, 0);
                 vTaskDelay(pdMS_TO_TICKS(100));
                 break;
 
-            case ALARM_TASK_QUEUE_MESSAGE_STOP:
+            case ALARM_QUEUE_MESSAGE_STOP:
                 vTaskDelay(pdMS_TO_TICKS(10));
                 break;
 

@@ -14,7 +14,7 @@
 #define APP_CONFIG_PIN_RFID_ENABLE GPIO_NUM_33
 #define APP_CONFIG_RFID_UART_RX_BAUD 2400
 
-#define APP_CONFIG_I2C_NUwM I2C_NUM_0
+#define APP_CONFIG_I2C_NUM I2C_NUM_0
 #define APP_CONFIG_PIN_I2C_SDA GPIO_NUM_21
 #define APP_CONFIG_PIN_I2C_SCL GPIO_NUM_22
 
@@ -25,7 +25,5 @@
 // ########################
 // ## Global definitions ##
 // ########################
-
-#define APP_CONFIG_QUEUE_SIZE_ITEMS 16
 
 #define APP_CONFIG_RFID_UART_RX_BUF_SIZE 256
