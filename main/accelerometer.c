@@ -78,49 +78,49 @@ static void accelerometer_task_handler(void *)
             const metric_t metric_acceleration_x = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ACCELERATION_X,
                 .timestamp = 0,
-                .value.float_value = acceleration.x,
+                .float_value = acceleration.x,
             };
             xQueueSendToBack(queue_metric_handle, &metric_acceleration_x, portMAX_DELAY);
             const metric_t metric_acceleration_y = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ACCELERATION_Y,
                 .timestamp = 0,
-                .value.float_value = acceleration.y,
+                .float_value = acceleration.y,
             };
             xQueueSendToBack(queue_metric_handle, &metric_acceleration_y, portMAX_DELAY);
             const metric_t metric_acceleration_z = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ACCELERATION_Z,
                 .timestamp = 0,
-                .value.float_value = acceleration.z,
+                .float_value = acceleration.z,
             };
             xQueueSendToBack(queue_metric_handle, &metric_acceleration_z, portMAX_DELAY);
             const metric_t metric_acceleration_total = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ACCELERATION_TOTAL,
                 .timestamp = 0,
-                .value.float_value = acceleration_sum,
+                .float_value = acceleration_sum,
             };
             xQueueSendToBack(queue_metric_handle, &metric_acceleration_total, portMAX_DELAY);
             const metric_t metric_rotation_x = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ROTATION_X,
                 .timestamp = 0,
-                .value.float_value = rotation.x,
+                .float_value = rotation.x,
             };
             xQueueSendToBack(queue_metric_handle, &metric_rotation_x, portMAX_DELAY);
             const metric_t metric_rotation_y = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ROTATION_Y,
                 .timestamp = 0,
-                .value.float_value = rotation.y,
+                .float_value = rotation.y,
             };
             xQueueSendToBack(queue_metric_handle, &metric_rotation_y, portMAX_DELAY);
             const metric_t metric_rotation_z = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ROTATION_Z,
                 .timestamp = 0,
-                .value.float_value = rotation.z,
+                .float_value = rotation.z,
             };
             xQueueSendToBack(queue_metric_handle, &metric_rotation_z, portMAX_DELAY);
             const metric_t metric_rotation_total = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ROTATION_TOTAL,
                 .timestamp = 0,
-                .value.float_value = rotation_sum,
+                .float_value = rotation_sum,
             };
             xQueueSendToBack(queue_metric_handle, &metric_rotation_total, portMAX_DELAY);
         }

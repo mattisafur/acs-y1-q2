@@ -60,7 +60,7 @@ typedef struct metric_t
         float float_value;
         bool bool_value;
         uint16_t uint16_value;
-    } value;
+    };
 } metric_t;
 
 void queue_init(void);
