@@ -176,6 +176,24 @@ esp_err_t accelerometer_init(void)
     return ESP_OK;
 
 cleanup_device_descriptor:
-    mpu6050_free_desc(&device);
+    esp_err_t cleanup_esp_ret = mpu6050_free_desc(&device);
+    if (cleanup_esp_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to free device descriptor: %s", esp_err_to_name(cleanup_esp_ret));
+        abort();
+    }
+
     return esp_ret;
+}
+
+esp_err_t accelerometer_deinit(void)
+{
+    esp_err_t ret = mpu6050_free_desc(&device);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to free device descriptor: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    return ESP_OK;
 }
