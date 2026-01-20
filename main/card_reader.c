@@ -85,8 +85,42 @@ esp_err_t card_reader_init(void)
     }
 
     return ESP_OK;
+
+cleanup_uart:
+    esp_err_t cleanup_esp_ret = uart_driver_delete(RFID_UART_NUM);
+    if (cleanup_esp_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to delete UART driver: %s. aborting program", esp_err_to_name(cleanup_esp_ret));
+        abort();
+    }
+cleanup_gpio:
+    cleanup_esp_ret = gpio_reset_pin(PIN_CARD_READER_ENABLE);
+    if (cleanup_esp_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to reset the gpio pin: %s. aborting program", esp_err_to_name(cleanup_esp_ret));
+        abort();
+    }
+return esp_ret;
 }
 
+esp_err_t card_reader_deinit(void)
+{
+    esp_err_t ret = uart_driver_delete(RFID_UART_NUM);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to delete UART driver: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    ret = gpio_reset_pin(PIN_CARD_READER_ENABLE);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to reset the gpio pin: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    return ESP_OK;
+}
 static void card_reader_task_handler(void *)
 {
     bool valid = false;
