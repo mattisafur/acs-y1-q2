@@ -2,6 +2,7 @@
 
 #include <driver/gpio.h>
 #include <esp_log.h>
+#include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <math.h>
 #include <mpu6050.h>
@@ -129,42 +130,52 @@ static void accelerometer_task_handler(void *)
 
 esp_err_t accelerometer_init(void)
 {
-    esp_err_t ret = mpu6050_init_desc(&device, I2C_ACCELEROMETER_ADDR, I2C_NUM, PIN_I2C_SDA, PIN_I2C_SCL);
-    if (ret != ESP_OK)
+    esp_err_t esp_ret = mpu6050_init_desc(&device, I2C_ACCELEROMETER_ADDR, I2C_NUM, PIN_I2C_SDA, PIN_I2C_SCL);
+    if (esp_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed initializing device descriptor: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG, "Failed initializing device descriptor: %s", esp_err_to_name(esp_ret));
         goto cleanup_device_descriptor;
     }
 
     unsigned int failed_tries = 0;
     for (;;)
     {
-        ret = i2c_dev_probe(&device.i2c_dev, I2C_DEV_WRITE);
-        if (ret == ESP_OK)
+        esp_ret = i2c_dev_probe(&device.i2c_dev, I2C_DEV_WRITE);
+        if (esp_ret == ESP_OK)
         {
             break;
         }
 
-        ESP_LOGW(TAG, "Failed to find device: %s", esp_err_to_name(ret));
+        ESP_LOGW(TAG, "Failed to find device: %s", esp_err_to_name(esp_ret));
 
         failed_tries++;
         if (failed_tries > 5)
         {
-            ESP_LOGE(TAG, "Failed to find device more than 5 times: %s", esp_err_to_name(ret));
+            ESP_LOGE(TAG, "Failed to find device more than 5 times: %s", esp_err_to_name(esp_ret));
             goto cleanup_device_descriptor;
         }
 
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 
-    ret = mpu6050_init(&device);
-    if (ret != ESP_OK)
+    esp_ret = mpu6050_init(&device);
+    if (esp_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to initialize device: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG, "Failed to initialize device: %s", esp_err_to_name(esp_ret));
         goto cleanup_device_descriptor;
     }
 
+    BaseType_t rtos_ret = xTaskCreate(accelerometer_task_handler, "Accelerometer", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
+    if (rtos_ret != pdPASS)
+    {
+        ESP_LOGE(TAG, "Failed to create task with error code %d", rtos_ret);
+        esp_ret = ESP_FAIL;
+        goto cleanup_device_descriptor;
+    }
+
+    return ESP_OK;
+
 cleanup_device_descriptor:
-    device = (mpu6050_dev_t){0};
-    return ret;
+    mpu6050_free_desc(&device);
+    return esp_ret;
 }
