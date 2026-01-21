@@ -6,7 +6,7 @@
 
 static const char *TAG = "learn/buzzer";
 
-#define GPIO_BUZZER GPIO_NUM_25
+#define GPIO_BUZZER GPIO_NUM_12
 
 void app_main(void)
 {
