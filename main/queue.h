@@ -20,6 +20,7 @@ typedef enum message_t
     MESSAGE_BUZZER_CARD_INVALID,
     MESSAGE_CARD_READER_CARD_VALID,
     MESSAGE_CARD_READER_CARD_INVALID,
+    MESSAGE_TIME_OF_FLIGHT_TRIGGERED,
 } message_t;
 
 typedef enum component_t

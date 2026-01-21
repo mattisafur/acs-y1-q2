@@ -65,13 +65,30 @@ dependencies:
     - esp32s2
     - esp32s3
     version: 2.1.8
+  grrtzm/vl53l1x_library:
+    component_hash: 845575d40220f911d635e1f3ac3209863d79ec5e17e93a6dea8345d0e082e854
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.5.2'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    targets:
+    - esp32
+    - esp32s2
+    - esp32s3
+    - esp32c3
+    - esp32c6
+    version: 0.3.1
   idf:
     source:
       type: idf
-    version: 5.5.1
+    version: 5.5.2
 direct_dependencies:
 - esp-idf-lib/mpu6050
+- grrtzm/vl53l1x_library
 - idf
-manifest_hash: a715e4a4e3091a5190acff1fde81db1ce6335ee56bd52aefb195443c506e940a
+manifest_hash: 67edee59d27764eeee28673bb0b81a03e7327dc30cf2855db56b2e48d44179ba
 target: esp32
 version: 2.0.0

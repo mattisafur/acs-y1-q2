@@ -67,7 +67,7 @@ esp_err_t card_reader_init(void)
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to install UART driver: %s", esp_err_to_name(esp_ret));
-        return esp_ret;
+        goto cleanup_uart;
     }
     gpio_config_t config_enable = {
         .pin_bit_mask = 1 << PIN_CARD_READER_ENABLE,
@@ -81,7 +81,7 @@ esp_err_t card_reader_init(void)
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to configure enable gpio: %s", esp_err_to_name(esp_ret));
-        return esp_ret;
+        goto cleanup_gpio;
     }
 
     BaseType_t rtos_ret = xTaskCreate(card_reader_task_handler, "Card Reader", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &card_reader_task_handle);

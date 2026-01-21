@@ -115,6 +115,13 @@ static void task_orchastrator_handler(void *)
                 ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", msg, ret);
             }
             break;
+        case MESSAGE_TIME_OF_FLIGHT_TRIGGERED:
+            ESP_LOGD(TAG, "Received time of flight triggered message");
+            msg = MESSAGE_BUZZER_ALARM_START;
+            ret = xQueueSendToBack(queue_buzzer_handle, &msg, portMAX_DELAY);
+            if (ret != pdPASS)
+            {
+                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", msg, ret);
             }
             break;
             
