@@ -19,7 +19,7 @@
 #define MAX_RETRY       10
 
 #define SENSOR_ID       "sensor2"
-#define SERVER_URL "https://andrejnetlab1a.francecentral.cloudapp.azure.com:8345/post"
+#define SERVER_URL "https://andrejnetlab1a.francecentral.cloudapp.azure.com:8345/post" // needs to be changed later to the actual server URL
 
 
 
