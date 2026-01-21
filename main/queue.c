@@ -10,7 +10,6 @@ QueueHandle_t queue_task_return_handle;
 QueueHandle_t queue_card_reader_handle;
 QueueHandle_t queue_buzzer_handle;
 QueueHandle_t queue_accelerometer_handle;
-QueueHandle_t queue_time_of_flight_handle;
 QueueHandle_t queue_metric_handle;
 
 void queue_init(void)
@@ -19,6 +18,5 @@ void queue_init(void)
     queue_card_reader_handle = xQueueCreate(QUEUE_SIZE_ITEMS, sizeof(message_t));
     queue_buzzer_handle = xQueueCreate(QUEUE_SIZE_ITEMS, sizeof(message_t));
     queue_accelerometer_handle = xQueueCreate(QUEUE_SIZE_ITEMS, sizeof(message_t));
-    queue_time_of_flight_handle = xQueueCreate(QUEUE_SIZE_ITEMS, sizeof(message_t));
     queue_metric_handle = xQueueCreate(QUEUE_SIZE_ITEMS, sizeof(metric_t));
 }

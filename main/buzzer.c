@@ -55,6 +55,19 @@ static void buzzer_task_handler(void *)
         case MESSAGE_BUZZER_CARD_INVALID:
             xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_STOP, portMAX_DELAY);
 
+            gpio_set_level(PIN_BUZZER, 1);
+            vTaskDelay(pdMS_TO_TICKS(50));
+            gpio_set_level(PIN_BUZZER, 0);
+            vTaskDelay(pdMS_TO_TICKS(50));
+            gpio_set_level(PIN_BUZZER, 1);
+            vTaskDelay(pdMS_TO_TICKS(50));
+            gpio_set_level(PIN_BUZZER, 0);
+            vTaskDelay(pdMS_TO_TICKS(50));
+            gpio_set_level(PIN_BUZZER, 1);
+            vTaskDelay(pdMS_TO_TICKS(50));
+            gpio_set_level(PIN_BUZZER, 0);
+            vTaskDelay(pdMS_TO_TICKS(50));
+
             xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_START, portMAX_DELAY);
             break;
 
@@ -147,6 +160,28 @@ cleanup_alarm_task:
 cleanup_buzzer_task:
     vTaskDelete(buzzer_task_handle);
 cleanup_gpio:
-    gpio_reset_pin(PIN_BUZZER);
+    esp_err_t cleanup_esp_ret = gpio_reset_pin(PIN_BUZZER);
+    if (cleanup_esp_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to reset the gpio pin: %s. aborting program", esp_err_to_name(cleanup_esp_ret));
+        abort();
+    }
+
     return esp_ret;
+}
+
+esp_err_t buzzer_deinit(void)
+{
+    vTaskDelete(alarm_task_handle);
+
+    vTaskDelete(buzzer_task_handle);
+
+    esp_err_t ret = gpio_reset_pin(PIN_BUZZER);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to reset gpio pin: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    return ESP_OK;
 }

@@ -6,6 +6,6 @@ idf_component_register(
          "card_reader.c"
          "metrics_publisher.c"
          "task_orchastrator.c"
-         "time_of_flight.c"
+        
     INCLUDE_DIRS "."
 )

@@ -84,9 +84,51 @@ esp_err_t card_reader_init(void)
         return esp_ret;
     }
 
+    BaseType_t rtos_ret = xTaskCreate(card_reader_task_handler, "Card Reader", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &card_reader_task_handle);
+    if (rtos_ret != pdPASS)
+    {
+        ESP_LOGE(TAG, "Failed to create card reader task with error code: %d", rtos_ret);
+        esp_ret = ESP_FAIL;
+        goto cleanup_uart;
+    }
+
     return ESP_OK;
+
+cleanup_uart:
+    esp_err_t cleanup_esp_ret = uart_driver_delete(RFID_UART_NUM);
+    if (cleanup_esp_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to delete UART driver: %s. aborting program", esp_err_to_name(cleanup_esp_ret));
+        abort();
+    }
+cleanup_gpio:
+    cleanup_esp_ret = gpio_reset_pin(PIN_CARD_READER_ENABLE);
+    if (cleanup_esp_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to reset the gpio pin: %s. aborting program", esp_err_to_name(cleanup_esp_ret));
+        abort();
+    }
+return esp_ret;
 }
 
+esp_err_t card_reader_deinit(void)
+{
+    esp_err_t ret = uart_driver_delete(RFID_UART_NUM);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to delete UART driver: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    ret = gpio_reset_pin(PIN_CARD_READER_ENABLE);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to reset the gpio pin: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    return ESP_OK;
+}
 static void card_reader_task_handler(void *)
 {
     bool valid = false;
@@ -151,7 +193,7 @@ static void card_reader_task_handler(void *)
         .component = COMPONENT_CARD_READER,
         .message = valid ? MESSAGE_CARD_READER_CARD_VALID : MESSAGE_CARD_READER_CARD_INVALID,
     };
-    BaseType_t q_ret = xQueueSend(queue_card_reader_handle, &tx_msg, 0);
+    BaseType_t q_ret = xQueueSendToBack(queue_card_reader_handle, &tx_msg, 0);
     if (q_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to send card read result to queue with error code: %d", q_ret);
@@ -164,3 +206,5 @@ static void card_reader_task_handler(void *)
     xQueueSendToBack(queue_metric_handle, &metric_card_reader_valid, portMAX_DELAY);
     vTaskDelay(pdMS_TO_TICKS(RFID_DEBOUNCE_MS)); // Debounce delay
 }
+
+
