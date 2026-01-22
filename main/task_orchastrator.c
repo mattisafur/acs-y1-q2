@@ -8,6 +8,7 @@
 #include "accelerometer.h"
 #include "buzzer.h"
 #include "card_reader.h"
+#include "i2c_master_bus.h"
 #include "queue.h"
 
 static const char *TAG = "TASK ORCHASTRATOR";
@@ -16,11 +17,18 @@ TaskHandle_t task_handle;
 
 esp_err_t task_orchastrator_init(void)
 {
-    esp_err_t esp_ret = accelerometer_init();
+    esp_err_t esp_ret = i2c_master_bus_init();
+    if (esp_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to initialize I2C master bus:  %s", esp_ret);
+        goto cleanup_nothing;
+    }
+
+    esp_ret = accelerometer_init();
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to initialize accelerometer: %s", esp_err_to_name(esp_ret));
-        goto cleanup_nothing;
+        goto cleanup_i2c_master_bus;
     }
 
     esp_ret = buzzer_init();
@@ -82,7 +90,13 @@ cleanup_accelerometer:
         ESP_LOGE(TAG, "Failed to deinitialize accelerometer: %s. Aborting program.", esp_err_to_name(cleanup_esp_ret));
         abort();
     }
-
+cleanup_i2c_master_bus:
+    cleanup_esp_ret = i2c_master_bus_deinit();
+    if (cleanup_esp_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to deinitialize i2c master bus: %s. aborting program.", esp_err_to_name(cleanup_esp_ret));
+        abort();
+    }
 cleanup_nothing:
     return esp_ret;
 }
