@@ -1,10 +1,15 @@
 #include "metrics_publisher.h"
 
+#include <cJSON.h>
 #include <esp_err.h>
 #include <esp_log.h>
 #include <esp_netif.h>
 #include <esp_wifi.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
 #include <nvs_flash.h>
+
+#include "queue.h"
 
 static const char *TAG = "METRICS PUBLISHER";
 
@@ -22,7 +27,81 @@ static EventGroupHandle_t wifi_event_group;
 static esp_event_handler_instance_t wifi_event_handler_instance;
 static esp_event_handler_instance_t got_ip_event_handler_instance;
 
-static void metrics_publisher_handler(void *) {}
+static cJSON *metric_to_cjson(metric_t *metric)
+{
+    cJSON *json = cJSON_Create_Object();
+    cJSON_AddNumberToObject(json, "timestamp", metric->timestamp);
+
+    switch (metric->metric_type)
+    {
+    case METRIC_TYPE_ACCELEROMETER_ACCELERATION_X:
+        cJSON_AddStringToObject(json, "metric_type", "METRIC_TYPE_ACCELEROMETER_ACCELERATION_X");
+        cJSON_AddNumberToObject(json, "float_value", metric->float_value);
+        break;
+
+    case METRIC_TYPE_ACCELEROMETER_ACCELERATION_Y:
+        cJSON_AddStringToObject(json, "metric_type", "METRIC_TYPE_ACCELEROMETER_ACCELERATION_Y");
+        cJSON_AddNumberToObject(json, "float_value", metric->float_value);
+        break;
+
+    case METRIC_TYPE_ACCELEROMETER_ACCELERATION_Z:
+        cJSON_AddStringToObject(json, "metric_type", "METRIC_TYPE_ACCELEROMETER_ACCELERATION_Z");
+        cJSON_AddNumberToObject(json, "float_value", metric->float_value);
+        break;
+
+    case METRIC_TYPE_ACCELEROMETER_ACCELERATION_TOTAL:
+        cJSON_AddStringToObject(json, "metric_type", "METRIC_TYPE_ACCELEROMETER_ACCELERATION_TOTAL");
+        cJSON_AddNumberToObject(json, "float_value", metric->float_value);
+        break;
+
+    case METRIC_TYPE_ACCELEROMETER_ROTATION_X:
+        cJSON_AddStringToObject(json, "metric_type", "METRIC_TYPE_ACCELEROMETER_ROTATION_X");
+        cJSON_AddNumberToObject(json, "float_value", metric->float_value);
+        break;
+
+    case METRIC_TYPE_ACCELEROMETER_ROTATION_Y:
+        cJSON_AddStringToObject(json, "metric_type", "METRIC_TYPE_ACCELEROMETER_ROTATION_Y");
+        cJSON_AddNumberToObject(json, "float_value", metric->float_value);
+        break;
+
+    case METRIC_TYPE_ACCELEROMETER_ROTATION_Z:
+        cJSON_AddStringToObject(json, "metric_type", "METRIC_TYPE_ACCELEROMETER_ROTATION_Z");
+        cJSON_AddNumberToObject(json, "float_value", metric->float_value);
+        break;
+
+    case METRIC_TYPE_ACCELEROMETER_ROTATION_TOTAL:
+        cJSON_AddStringToObject(json, "metric_type", "METRIC_TYPE_ACCELEROMETER_ROTATION_TOTAL");
+        cJSON_AddNumberToObject(json, "float_value", metric->float_value);
+        break;
+
+    case METRIC_TYPE_TIME_OF_FLIGHT_DISTANCE:
+        cJSON_AddStringToObject(json, "metric_type", "METRIC_TYPE_TIME_OF_FLIGHT_DISTANCE");
+        cJSON_AddNumberToObject(json, "uint16_value", metric->uint16_value);
+        break;
+
+    case METRIC_TYPE_CARD_READER_VALID:
+        cJSON_AddStringToObject(json, "metric_type", "METRIC_TYPE_CARD_READER_VALID");
+        cJSON_AddBoolToObject(json, "bool_value", metric->bool_value);
+        break;
+
+    default:
+        ESP_LOGE(TAG, "Received unknown metric type with enum number %d", metric->metric_type);
+        break;
+    }
+
+    return json;
+}
+
+static void metrics_publisher_handler(void *)
+{
+    for (;;)
+    {
+        metric_t msg;
+        BaseType_t ret = xQueueReceive(queue_metrics_handle, &msg, portMAX_DELAY);
+
+        cJSON *json_metric = metric_to_cjson(&msg);
+    }
+}
 
 static void wifi_event_handler(void *, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
