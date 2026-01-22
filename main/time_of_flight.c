@@ -28,7 +28,57 @@ static void time_of_flight_handler(void *)
         BaseType_t esp_ret = xQueueReceive(queue_time_of_flight_handle, &msg, 0);
         if (esp_ret == pdTRUE)
         {
+            switch (msg)
+            {
+            case MESSAGE_ENABLE:
+                tof_enabled = true;
+                break;
+            case MESSAGE_DISABLE:
+                tof_enabled = false;
+                break;
+
+            default:
+                ESP_LOGE(TAG, "Received invalid message from queue, message num: %d", msg);
+                break;
+            }
         }
+        if (tof_enabled)
+        {
+            vl53l1x_result_t read = {0};
+            esp_err_t tof_err = vl53l1x_read(&sensor, &read, 200);
+            if (tof_err = ESP_OK)
+            {
+                if (r.status == 0)
+                {
+                    if (r.distance_mm > 200)
+                    {
+                        const orchestrator_return_message_t tof_message = {
+                            .component = COMPONENT_TIME_OF_FLIGHT,
+                            .event = MESSAGE_SENSOR_TRIGGERED,
+                        };
+                        xQueueSendToBack(queue_task_return_handle, &tof_message, portMAX_DELAY);
+
+                        const metric_t metric_tof_distance = {
+                            .metric_type = METRIC_TYPE_TIME_OF_FLIGHT_DISTANCE,
+                            .timestamp = 0,
+                            .float_value = r.distance_mm,
+                        };
+
+                        xQueueSendToBack(queue_metric_handle, &metric_tof_distance, portMAX_DELAY);
+                    }
+                }
+                else
+                {
+                    EPS_LOGE(TAG, "Measurement error with status: %d", r.status);
+                    
+                }
+            }
+            else 
+            {
+                ESP_LOGE(TAG, "Failed to read measurements: %s", esp_err_to_name(err));
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 
