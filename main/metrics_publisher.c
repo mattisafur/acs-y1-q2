@@ -242,6 +242,7 @@ cleanup_none:
 esp_err_t metrics_publisher_deinit(void)
 {
     vTaskDelete(task_handle);
+    task_handle = NULL;
 
     esp_err_t ret = esp_wifi_stop();
     if (ret != ESP_OK)

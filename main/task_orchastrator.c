@@ -37,18 +37,32 @@ esp_err_t task_orchastrator_init(void)
         goto cleanup_buzzer;
     }
 
+    esp_ret = time_of_flight_init();
+    if (esp_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to initialize time_of_flight: %s", esp_err_to_name(esp_ret));
+        goto cleanup_time_of_flight;
+    }
+
     BaseType_t rtos_ret = xTaskCreate(task_orchastrator_handler, "Task Orchastrator", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to create task with error code: %d", rtos_ret);
         esp_ret = ESP_FAIL;
-        goto cleanup_card_reader;
+        goto cleanup_time_of_flight;
     }
 
     return ESP_OK;
 
+cleanup_time_of_flight:
+    esp_err_t cleanup_esp_ret = time_of_flight_deinit();
+    if (cleanup_esp_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to deinitialize time_of_flight: %s. Aborting program.", esp_err_to_name(cleanup_esp_ret));
+        abort();
+    }
 cleanup_card_reader:
-    esp_err_t cleanup_esp_ret = card_reader_deinit();
+    cleanup_esp_ret = card_reader_deinit();
     if (cleanup_esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to deinitialize card_reader: %s. Aborting program.", esp_err_to_name(cleanup_esp_ret));
@@ -68,17 +82,13 @@ cleanup_accelerometer:
         ESP_LOGE(TAG, "Failed to deinitialize accelerometer: %s. Aborting program.", esp_err_to_name(cleanup_esp_ret));
         abort();
     }
+
 cleanup_nothing:
     return esp_ret;
 }
 
 static void task_orchastrator_handler(void *)
 {
-
-    task_orchastrator_init();
-    buzzer_init();
-    card_reader_init();
-
     for (;;)
     {
         message_t msg;
@@ -124,11 +134,10 @@ static void task_orchastrator_handler(void *)
                 ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", msg, ret);
             }
             break;
-            
+
         default:
             ESP_LOGE(TAG, "Received unknown message type");
             break;
         }
-        
     }
 }

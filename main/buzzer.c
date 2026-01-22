@@ -157,8 +157,10 @@ esp_err_t buzzer_init(void)
 
 cleanup_alarm_task:
     vTaskDelete(alarm_task_handle);
+    alarm_task_handle = NULL;
 cleanup_buzzer_task:
     vTaskDelete(buzzer_task_handle);
+    buzzer_task_handle = NULL;
 cleanup_gpio:
     esp_err_t cleanup_esp_ret = gpio_reset_pin(PIN_BUZZER);
     if (cleanup_esp_ret != ESP_OK)
@@ -173,8 +175,10 @@ cleanup_gpio:
 esp_err_t buzzer_deinit(void)
 {
     vTaskDelete(alarm_task_handle);
+    alarm_task_handle = NULL;
 
     vTaskDelete(buzzer_task_handle);
+    buzzer_task_handle = NULL;
 
     esp_err_t ret = gpio_reset_pin(PIN_BUZZER);
     if (ret != ESP_OK)

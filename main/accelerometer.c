@@ -188,6 +188,9 @@ cleanup_device_descriptor:
 
 esp_err_t accelerometer_deinit(void)
 {
+    vTaskDelete(task_handle);
+    task_handle = NULL;
+
     esp_err_t ret = mpu6050_free_desc(&device);
     if (ret != ESP_OK)
     {
