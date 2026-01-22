@@ -1,6 +1,7 @@
 #include "queue.h"
 
 #include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
 
 #define QUEUE_SIZE_ITEMS 16
 
@@ -11,7 +12,7 @@ QueueHandle_t queue_card_reader_handle;
 QueueHandle_t queue_buzzer_handle;
 QueueHandle_t queue_accelerometer_handle;
 QueueHandle_t queue_time_of_flight_handle;
-QueueHandle_t queue_metric_handle;
+QueueHandle_t queue_metrics_handle;
 
 esp_err_t queue_init(void)
 {
@@ -50,8 +51,8 @@ esp_err_t queue_init(void)
         return ESP_FAIL;
     }
 
-    queue_metric_handle = xQueueCreate(QUEUE_SIZE_ITEMS, sizeof(metric_t));
-    if (queue_metric_handle == 0)
+    queue_metrics_handle = xQueueCreate(QUEUE_SIZE_ITEMS, sizeof(metric_t));
+    if (queue_metrics_handle == 0)
     {
         ESP_LOGE(TAG, "Failed to create metric queue");
         return ESP_FAIL;
@@ -74,6 +75,6 @@ void queue_deinit(void)
     vQueueDelete(queue_accelerometer_handle);
     queue_accelerometer_handle = NULL;
 
-    vQueueDelete(queue_metric_handle);
-    queue_metric_handle = NULL;
+    vQueueDelete(queue_metrics_handle);
+    queue_metrics_handle = NULL;
 }

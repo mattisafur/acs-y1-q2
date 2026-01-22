@@ -65,7 +65,7 @@ static void card_reader_task_handler(void *)
                         .timestamp = 0,
                         .value.bool_value = valid ? true : false,
                     };
-                    xQueueSendToBack(queue_metric_handle, &metric_card_reader_valid, portMAX_DELAY);
+                    xQueueSendToBack(queue_metrics_handle, &metric_card_reader_valid, portMAX_DELAY);
                 }
                 else
                 {
@@ -87,7 +87,7 @@ static void card_reader_task_handler(void *)
                         .timestamp = 0,
                         .value.bool_value = valid ? true : false,
                     };
-                    xQueueSendToBack(queue_metric_handle, &metric_card_reader_valid, portMAX_DELAY);
+                    xQueueSendToBack(queue_metrics_handle, &metric_card_reader_valid, portMAX_DELAY);
                 }
             }
             while (len > 0)

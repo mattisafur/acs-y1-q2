@@ -1,6 +1,7 @@
 #pragma once
 
 #include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
 #include <time.h>
 
 extern QueueHandle_t queue_task_return_handle;
@@ -8,7 +9,7 @@ extern QueueHandle_t queue_card_reader_handle;
 extern QueueHandle_t queue_buzzer_handle;
 extern QueueHandle_t queue_accelerometer_handle;
 extern QueueHandle_t queue_time_of_flight_handle;
-extern QueueHandle_t queue_metric_handle;
+extern QueueHandle_t queue_metrics_handle;
 
 typedef enum message_t
 {
