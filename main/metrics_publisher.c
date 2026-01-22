@@ -97,9 +97,9 @@ static void metrics_publisher_handler(void *)
     for (;;)
     {
         metric_t msg;
-        BaseType_t ret = xQueueReceive(queue_metrics_handle, &msg, portMAX_DELAY);
+        xQueueReceive(queue_metrics_handle, &msg, portMAX_DELAY);
 
-        cJSON *json_metric = metric_to_cjson(&msg);
+        (void)metric_to_cjson(&msg);
     }
 }
 
@@ -136,7 +136,7 @@ static void wifi_event_handler(void *, esp_event_base_t event_base, int32_t even
     }
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
     {
-        ip_event_got_ip_t *got_ip_event = event_data;
+        (void)event_data;
         wifi_reconnect_count = 0;
         xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
     }
@@ -195,14 +195,14 @@ esp_err_t metrics_publisher_init(void)
         goto cleanup_event_loop;
     }
 
-    esp_ret = esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_handler_instance, NULL, wifi_event_handler_instance);
+    esp_ret = esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, &wifi_event_handler_instance);
     if (esp_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to register wifi event handler: %d", esp_err_to_name(esp_ret));
+        ESP_LOGE(TAG, "Failed to register wifi event handler: %s", esp_err_to_name(esp_ret));
         goto cleanup_wifi;
     }
 
-    esp_ret = esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event_handler_instance, NULL, &got_ip_event_handler_instance);
+    esp_ret = esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, &got_ip_event_handler_instance);
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to register ip event handler: %s", esp_err_to_name(esp_ret));

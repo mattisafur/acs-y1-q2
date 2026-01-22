@@ -3,6 +3,7 @@
 #include <driver/gpio.h>
 #include <esp_err.h>
 #include <esp_log.h>
+#include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include <freertos/task.h>
 
@@ -30,9 +31,9 @@ static void buzzer_task_handler(void *)
     for (;;)
     {
         message_t incoming_message;
-        BaseType_t ret = xQueueReceive(queue_buzzer_handle, &incoming_message, portMAX_DELAY);
+        xQueueReceive(queue_buzzer_handle, &incoming_message, portMAX_DELAY);
 
-        message_t outgoing_message;
+        alarm_queue_message_t outgoing_message;
         switch (incoming_message)
         {
         case MESSAGE_BUZZER_ALARM_START:
