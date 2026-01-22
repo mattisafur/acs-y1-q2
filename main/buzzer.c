@@ -19,7 +19,7 @@ static TaskHandle_t alarm_task_handle;
 
 static QueueHandle_t alarm_queue_handle;
 
-typedef enum alarm_queue_message_t
+typedef enum
 {
     ALARM_QUEUE_MESSAGE_START,
     ALARM_QUEUE_MESSAGE_STOP,
@@ -29,31 +29,37 @@ static void buzzer_task_handler(void *)
 {
     for (;;)
     {
-        message_t msg;
-        const BaseType_t ret = xQueueReceive(queue_buzzer_handle, &msg, portMAX_DELAY);
+        message_t incoming_message;
+        BaseType_t ret = xQueueReceive(queue_buzzer_handle, &incoming_message, portMAX_DELAY);
 
-        switch (msg)
+        message_t outgoing_message;
+        switch (incoming_message)
         {
         case MESSAGE_BUZZER_ALARM_START:
-            xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_START, portMAX_DELAY);
+            outgoing_message = ALARM_QUEUE_MESSAGE_START;
+            xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
             break;
 
         case MESSAGE_BUZZER_ALARM_STOP:
-            xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_STOP, portMAX_DELAY);
+            outgoing_message = ALARM_QUEUE_MESSAGE_STOP;
+            xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
             break;
 
         case MESSAGE_BUZZER_CARD_VALID:
-            xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_STOP, portMAX_DELAY);
+            outgoing_message = ALARM_QUEUE_MESSAGE_STOP;
+            xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
 
             gpio_set_level(PIN_BUZZER, 1);
             vTaskDelay(pdMS_TO_TICKS(150));
             gpio_set_level(PIN_BUZZER, 0);
 
-            xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_START, portMAX_DELAY);
+            outgoing_message = ALARM_QUEUE_MESSAGE_START;
+            xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
             break;
 
         case MESSAGE_BUZZER_CARD_INVALID:
-            xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_STOP, portMAX_DELAY);
+            outgoing_message = ALARM_QUEUE_MESSAGE_STOP;
+            xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
 
             gpio_set_level(PIN_BUZZER, 1);
             vTaskDelay(pdMS_TO_TICKS(50));
@@ -68,11 +74,12 @@ static void buzzer_task_handler(void *)
             gpio_set_level(PIN_BUZZER, 0);
             vTaskDelay(pdMS_TO_TICKS(50));
 
-            xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_START, portMAX_DELAY);
+            outgoing_message = ALARM_QUEUE_MESSAGE_START;
+            xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
             break;
 
         default:
-            ESP_LOGE(TAG, "Received invalid message from queue, message num: %d", msg);
+            ESP_LOGE(TAG, "Received invalid message from queue, message num: %d", outgoing_message);
             break;
         }
     }
@@ -85,7 +92,7 @@ static void alarm_task_handler(void *)
         alarm_queue_message_t msg;
         const BaseType_t ret = xQueueReceive(queue_buzzer_handle, &msg, 0);
 
-        if (ret != errQUEUE_EMPTY)
+        if (ret == pdTRUE)
         {
             switch (msg)
             {

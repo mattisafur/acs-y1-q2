@@ -11,6 +11,7 @@ void app_main(void)
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to initialize queues: %s", esp_err_to_name(ret));
+        goto cleanup_none;
     }
 
     ret = task_orchastrator_init();

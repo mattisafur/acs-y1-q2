@@ -23,8 +23,6 @@ static const char *TAG = "CARD READER";
 
 static TaskHandle_t task_handle;
 
-static bool rfid_enabled = true;
-
 static void card_reader_task_handler(void *)
 {
 
@@ -54,7 +52,7 @@ static void card_reader_task_handler(void *)
                         .component = COMPONENT_CARD_READER,
                         .message = valid ? MESSAGE_CARD_READER_CARD_VALID : MESSAGE_CARD_READER_CARD_INVALID,
                     };
-                    BaseType_t q_ret = xQueueSendToBack(queue_card_reader_handle, &tx_msg, 0);
+                    BaseType_t q_ret = xQueueSendToBack(queue_task_return_handle, &tx_msg, 0);
                     if (q_ret != pdPASS)
                     {
                         ESP_LOGE(TAG, "Failed to send card read result to queue with error code: %d", q_ret);
@@ -63,7 +61,7 @@ static void card_reader_task_handler(void *)
                     metric_t metric_card_reader_valid = {
                         .metric_type = METRIC_TYPE_CARD_READER_VALID,
                         .timestamp = 0,
-                        .value.bool_value = valid ? true : false,
+                        .bool_value = valid ? true : false,
                     };
                     xQueueSendToBack(queue_metrics_handle, &metric_card_reader_valid, portMAX_DELAY);
                 }
@@ -85,7 +83,7 @@ static void card_reader_task_handler(void *)
                     metric_t metric_card_reader_valid = {
                         .metric_type = METRIC_TYPE_CARD_READER_VALID,
                         .timestamp = 0,
-                        .value.bool_value = valid ? true : false,
+                        .bool_value = valid ? true : false,
                     };
                     xQueueSendToBack(queue_metrics_handle, &metric_card_reader_valid, portMAX_DELAY);
                 }
@@ -101,7 +99,7 @@ static void card_reader_task_handler(void *)
 
 esp_err_t card_reader_init(void)
 {
-    esp_err_t esp_ret = uart_config_t uart_config = {
+    uart_config_t uart_config = {
         .baud_rate = RFID_BAUD_RATE,
         .data_bits = UART_DATA_8_BITS,
         .parity = UART_PARITY_DISABLE,
@@ -109,14 +107,8 @@ esp_err_t card_reader_init(void)
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
         .source_clk = UART_SCLK_APB,
     };
-    if (esp_ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to create UART config: %s", esp_err_to_name(esp_ret));
-        return esp_ret;
-    }
-
     // Set UART parameters
-    esp_ret = uart_param_config(RFID_UART_NUM, &uart_config);
+    esp_err_t esp_ret = uart_param_config(RFID_UART_NUM, &uart_config);
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to configure UART parameters: %s", esp_err_to_name(esp_ret));
@@ -147,18 +139,13 @@ esp_err_t card_reader_init(void)
         ESP_LOGE(TAG, "Failed to install UART driver: %s", esp_err_to_name(esp_ret));
         goto cleanup_uart;
     }
-    esp_ret = pio_config_t config_enable = {
-        .pin_bit_mask = 1 << PIN_CARD_READER_ENABLE,
+    gpio_config_t config_enable = {
+        .pin_bit_mask = 1ULL << PIN_CARD_READER_ENABLE,
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_DISABLE,
     };
-    if (esp_ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to create enable gpio config: %s", esp_err_to_name(esp_ret));
-        goto cleanup_uart;
-    }
 
     esp_ret = gpio_config(&config_enable);
     if (esp_ret != ESP_OK)

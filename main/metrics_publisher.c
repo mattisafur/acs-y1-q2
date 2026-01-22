@@ -29,7 +29,7 @@ static esp_event_handler_instance_t got_ip_event_handler_instance;
 
 static cJSON *metric_to_cjson(metric_t *metric)
 {
-    cJSON *json = cJSON_Create_Object();
+    cJSON *json = cJSON_CreateObject();
     cJSON_AddNumberToObject(json, "timestamp", metric->timestamp);
 
     switch (metric->metric_type)
@@ -187,22 +187,22 @@ esp_err_t metrics_publisher_init(void)
 
     esp_netif_create_default_wifi_sta();
 
-    wifi_init_config_t wifi_config = WIFI_INIT_CONFIG_DEFAULT();
-    esp_ret = esp_wifi_init(&wifi_config);
-    if (esp_ret = ESP_OK)
+    wifi_init_config_t wifi_init_config = WIFI_INIT_CONFIG_DEFAULT();
+    esp_ret = esp_wifi_init(&wifi_init_config);
+    if (esp_ret == ESP_OK)
     {
-        ESP_LOG(TAG, "Failed to initialize wifi: %s", esp_err_to_name(esp_ret));
+        ESP_LOGE(TAG, "Failed to initialize wifi: %s", esp_err_to_name(esp_ret));
         goto cleanup_event_loop;
     }
 
-    esp_ret = esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler_instance, NULL, wifi_event_handler_instance);
+    esp_ret = esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_handler_instance, NULL, wifi_event_handler_instance);
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to register wifi event handler: %d", esp_err_to_name(esp_ret));
         goto cleanup_wifi;
     }
 
-    esp_ret = esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler_instance, NULL, &got_ip_event_handler_instance);
+    esp_ret = esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event_handler_instance, NULL, &got_ip_event_handler_instance);
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to register ip event handler: %s", esp_err_to_name(esp_ret));
@@ -302,7 +302,7 @@ cleanup_netif:
     cleanup_ret = esp_netif_deinit();
     if (cleanup_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to deinitialize network interface: %s. aborting program.", esp_err_to_nameF(cleanup_ret));
+        ESP_LOGE(TAG, "Failed to deinitialize network interface: %s. aborting program.", esp_err_to_name(cleanup_ret));
         abort();
     }
 cleanup_wifi_event_group:
@@ -311,7 +311,7 @@ cleanup_nvs_flash:
     cleanup_ret = nvs_flash_deinit();
     if (cleanup_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to deinitialize event group: %s. aborting program.", esp_err_to_nameF(cleanup_ret));
+        ESP_LOGE(TAG, "Failed to deinitialize event group: %s. aborting program.", esp_err_to_name(cleanup_ret));
         abort();
     }
 cleanup_none:
@@ -361,7 +361,7 @@ esp_err_t metrics_publisher_deinit(void)
     ret = esp_netif_deinit();
     if (ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to deinitialize network interface: %s", esp_err_to_nameF(ret));
+        ESP_LOGE(TAG, "Failed to deinitialize network interface: %s", esp_err_to_name(ret));
         return ret;
     }
 
@@ -370,7 +370,7 @@ esp_err_t metrics_publisher_deinit(void)
     ret = nvs_flash_deinit();
     if (ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to deinitialize event group: %s", esp_err_to_nameF(ret));
+        ESP_LOGE(TAG, "Failed to deinitialize event group: %s", esp_err_to_name(ret));
         return ret;
     }
 

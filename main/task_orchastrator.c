@@ -10,10 +10,57 @@
 #include "card_reader.h"
 #include "i2c_master_bus.h"
 #include "queue.h"
+#include "time_of_flight.h"
 
 static const char *TAG = "TASK ORCHASTRATOR";
 
 TaskHandle_t task_handle;
+
+static void task_orchastrator_handler(void *)
+{
+    for (;;)
+    {
+        message_t msg;
+        BaseType_t ret = xQueueReceive(queue_task_return_handle, &msg, portMAX_DELAY);
+
+        switch (msg)
+        {
+        case MESSAGE_SENSOR_TRIGGERED:
+            ESP_LOGD(TAG, "Received sensor triggered message");
+            msg = MESSAGE_BUZZER_ALARM_START;
+            ret = xQueueSendToBack(queue_buzzer_handle, &msg, portMAX_DELAY);
+            if (ret != pdPASS)
+            {
+                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", msg, ret);
+            }
+            break;
+
+        case MESSAGE_CARD_READER_CARD_VALID:
+            ESP_LOGD(TAG, "Received card reader valid message");
+            msg = MESSAGE_BUZZER_ALARM_STOP;
+            ret = xQueueSendToBack(queue_buzzer_handle, &msg, portMAX_DELAY);
+            if (ret != pdPASS)
+            {
+                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", msg, ret);
+            }
+            break;
+
+        case MESSAGE_CARD_READER_CARD_INVALID:
+            ESP_LOGD(TAG, "Received card reader invalid message");
+            msg = MESSAGE_BUZZER_ALARM_START;
+            ret = xQueueSendToBack(queue_buzzer_handle, &msg, portMAX_DELAY);
+            if (ret != pdPASS)
+            {
+                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", msg, ret);
+            }
+            break;
+
+        default:
+            ESP_LOGE(TAG, "Received unknown message type");
+            break;
+        }
+    }
+}
 
 esp_err_t task_orchastrator_init(void)
 {
@@ -49,7 +96,7 @@ esp_err_t task_orchastrator_init(void)
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to initialize time_of_flight: %s", esp_err_to_name(esp_ret));
-        goto cleanup_time_of_flight;
+        goto cleanup_card_reader;
     }
 
     BaseType_t rtos_ret = xTaskCreate(task_orchastrator_handler, "Task Orchastrator", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
@@ -99,50 +146,4 @@ cleanup_i2c_master_bus:
     }
 cleanup_nothing:
     return esp_ret;
-}
-
-static void task_orchastrator_handler(void *)
-{
-    for (;;)
-    {
-        message_t msg;
-        BaseType_t ret = xQueueReceive(queue_task_return_handle, &msg, portMAX_DELAY);
-
-        switch (msg)
-        {
-        case MESSAGE_SENSOR_TRIGGERED:
-            ESP_LOGD(TAG, "Received sensor triggered message");
-            msg = MESSAGE_BUZZER_ALARM_START;
-            ret = xQueueSendToBack(queue_buzzer_handle, &msg, portMAX_DELAY);
-            if (ret != pdPASS)
-            {
-                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", msg, ret);
-            }
-            break;
-
-        case MESSAGE_CARD_READER_CARD_VALID:
-            ESP_LOGD(TAG, "Received card reader valid message");
-            msg = MESSAGE_BUZZER_ALARM_STOP;
-            ret = xQueueSendToBack(queue_buzzer_handle, &msg, portMAX_DELAY);
-            if (ret != pdPASS)
-            {
-                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", msg, ret);
-            }
-            break;
-
-        case MESSAGE_CARD_READER_CARD_INVALID:
-            ESP_LOGD(TAG, "Received card reader invalid message");
-            msg = MESSAGE_BUZZER_ALARM_START;
-            ret = xQueueSendToBack(queue_buzzer_handle, &msg, portMAX_DELAY);
-            if (ret != pdPASS)
-            {
-                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", msg, ret);
-            }
-            break;
-
-        default:
-            ESP_LOGE(TAG, "Received unknown message type");
-            break;
-        }
-    }
 }

@@ -2,6 +2,8 @@
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <time.h>
 
 extern QueueHandle_t queue_task_return_handle;
@@ -11,7 +13,7 @@ extern QueueHandle_t queue_accelerometer_handle;
 extern QueueHandle_t queue_time_of_flight_handle;
 extern QueueHandle_t queue_metrics_handle;
 
-typedef enum message_t
+typedef enum
 {
     MESSAGE_ENABLE,
     MESSAGE_DISABLE,
@@ -24,7 +26,7 @@ typedef enum message_t
     MESSAGE_CARD_READER_CARD_INVALID,
 } message_t;
 
-typedef enum component_t
+typedef enum
 {
     COMPONENT_BUZZER,
     COMPONENT_CARD_READER,
@@ -32,13 +34,13 @@ typedef enum component_t
     COMPONENT_TIME_OF_FLIGHT,
 } component_t;
 
-typedef struct orchastrator_return_message_t
+typedef struct
 {
     component_t component;
     message_t message;
 } orchastrator_return_message_t;
 
-typedef enum metric_type_t
+typedef enum
 {
     METRIC_TYPE_ACCELEROMETER_ACCELERATION_X,
     METRIC_TYPE_ACCELEROMETER_ACCELERATION_Y,
@@ -52,7 +54,7 @@ typedef enum metric_type_t
     METRIC_TYPE_CARD_READER_VALID,
 } metric_type_t;
 
-typedef struct metric_t
+typedef struct
 {
     metric_type_t metric_type;
     time_t timestamp;

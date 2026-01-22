@@ -2,6 +2,7 @@
 
 #include <driver/gpio.h>
 #include <driver/i2c_master.h>
+#include <esp_log.h>
 
 static const char *TAG = "I2C MASTER BUS";
 
@@ -21,7 +22,7 @@ esp_err_t i2c_master_bus_init(void)
         .glitch_ignore_cnt = 7,
         .flags.enable_internal_pullup = true,
     };
-    esp_err_t ret = i2c_new_master_bus(&master_bus_config, i2c_master_bus_handle);
+    esp_err_t ret = i2c_new_master_bus(&master_bus_config, &i2c_master_bus_handle);
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to create new I2C master bus: %s", esp_err_to_name(ret));

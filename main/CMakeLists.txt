@@ -10,5 +10,12 @@ idf_component_register(
          "time_of_flight.c"
     
     INCLUDE_DIRS "."
-    REQUIRES esp_driver_i2c vl53l1x_library
+    
+    REQUIRES esp_driver_i2c
+             vl53l1x_library
+             json
+             nvs_flash
+             esp_netif
+             esp_wifi
+             esp_driver_uart
 )
