@@ -9,6 +9,7 @@
 #include <math.h>
 #include <mpu6050.h>
 
+#include "app_config.h"
 #include "queue.h"
 
 #define ACCELEROMETER_I2C_PORT_NUM I2C_NUM_1
@@ -180,7 +181,7 @@ esp_err_t accelerometer_init(void)
     }
 
     ESP_LOGD(TAG, "Initializing accelerometer freertos task...");
-    BaseType_t rtos_ret = xTaskCreate(accelerometer_task_handler, "Accelerometer", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
+    BaseType_t rtos_ret = xTaskCreate(accelerometer_task_handler, "Accelerometer", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to create task with error code %d", rtos_ret);

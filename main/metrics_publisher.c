@@ -3,11 +3,12 @@
 
 #include <cJSON.h>
 #include <esp_err.h>
+#include <esp_event.h>
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
-#include <esp_event.h>
 
+#include "app_config.h"
 #include "queue.h"
 
 static const char *TAG = "metrics publisher";
@@ -116,7 +117,7 @@ esp_err_t metrics_publisher_init(void)
     }
 
     BaseType_t rtos_ret = xTaskCreate(metrics_publisher_handler, "Metrics Publisher",
-                                      configMINIMAL_STACK_SIZE, NULL,
+                                      APP_CONFIG_TASK_STACK_SIZE, NULL,
                                       tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {

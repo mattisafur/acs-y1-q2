@@ -6,6 +6,7 @@
 #include <freertos/task.h>
 
 #include "accelerometer.h"
+#include "app_config.h"
 #include "buzzer.h"
 #include "card_reader.h"
 #include "queue.h"
@@ -19,43 +20,45 @@ static void task_orchastrator_handler(void *)
 {
     for (;;)
     {
-        message_t msg;
-        BaseType_t ret = xQueueReceive(queue_task_return_handle, &msg, portMAX_DELAY);
+        orchastrator_return_message_t incoming_message;
+        BaseType_t ret = xQueueReceive(queue_task_return_handle, &incoming_message, portMAX_DELAY);
+        ESP_LOGD(TAG, "Received message with enum code: %d from component with enum code: %d", incoming_message.message, incoming_message.component);
 
-        switch (msg)
+        message_t outgoing_message;
+        switch (incoming_message.message)
         {
         case MESSAGE_SENSOR_TRIGGERED:
-            ESP_LOGD(TAG, "Received sensor triggered message");
-            msg = MESSAGE_BUZZER_ALARM_START;
-            ret = xQueueSendToBack(queue_buzzer_handle, &msg, portMAX_DELAY);
+            ESP_LOGD(TAG, "Received sensor triggered message from component with enum number: %d", incoming_message.component);
+            outgoing_message = MESSAGE_BUZZER_ALARM_START;
+            ret = xQueueSendToBack(queue_buzzer_handle, &outgoing_message, portMAX_DELAY);
             if (ret != pdPASS)
             {
-                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", msg, ret);
+                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", outgoing_message, ret);
             }
             break;
 
         case MESSAGE_CARD_READER_CARD_VALID:
             ESP_LOGD(TAG, "Received card reader valid message");
-            msg = MESSAGE_BUZZER_ALARM_STOP;
-            ret = xQueueSendToBack(queue_buzzer_handle, &msg, portMAX_DELAY);
+            outgoing_message = MESSAGE_BUZZER_ALARM_STOP;
+            ret = xQueueSendToBack(queue_buzzer_handle, &outgoing_message, portMAX_DELAY);
             if (ret != pdPASS)
             {
-                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", msg, ret);
+                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", outgoing_message, ret);
             }
             break;
 
         case MESSAGE_CARD_READER_CARD_INVALID:
             ESP_LOGD(TAG, "Received card reader invalid message");
-            msg = MESSAGE_BUZZER_ALARM_START;
-            ret = xQueueSendToBack(queue_buzzer_handle, &msg, portMAX_DELAY);
+            outgoing_message = MESSAGE_BUZZER_ALARM_START;
+            ret = xQueueSendToBack(queue_buzzer_handle, &outgoing_message, portMAX_DELAY);
             if (ret != pdPASS)
             {
-                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", msg, ret);
+                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", outgoing_message, ret);
             }
             break;
 
         default:
-            ESP_LOGE(TAG, "Received unknown message type");
+            ESP_LOGE(TAG, "Received unknown message type with enum number: %d", incoming_message.message);
             break;
         }
     }
@@ -96,7 +99,7 @@ esp_err_t task_orchastrator_init(void)
     }
 
     ESP_LOGD(TAG, "creating task orchastrator freertos task...");
-    BaseType_t rtos_ret = xTaskCreate(task_orchastrator_handler, "Task Orchastrator", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
+    BaseType_t rtos_ret = xTaskCreate(task_orchastrator_handler, "Task Orchastrator", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to create task with error code: %d", rtos_ret);

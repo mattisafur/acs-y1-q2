@@ -6,6 +6,7 @@
 #include <esp_log.h>
 #include <vl53l1x.h>
 
+#include "app_config.h"
 #include "queue.h"
 
 static const char *TAG = "time of flight";
@@ -159,7 +160,7 @@ esp_err_t time_of_flight_init(void)
     }
 
     ESP_LOGD(TAG, "creating freertos task...");
-    BaseType_t rtos_ret = xTaskCreate(time_of_flight_handler, "Time of Flight", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
+    BaseType_t rtos_ret = xTaskCreate(time_of_flight_handler, "Time of Flight", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to create task with error code: %d", rtos_ret);

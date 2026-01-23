@@ -7,6 +7,7 @@
 #include <freertos/queue.h>
 #include <freertos/task.h>
 
+#include "app_config.h"
 #include "queue.h"
 
 #define PIN_BUZZER GPIO_NUM_12
@@ -32,6 +33,7 @@ static void buzzer_task_handler(void *)
     {
         message_t incoming_message;
         xQueueReceive(queue_buzzer_handle, &incoming_message, portMAX_DELAY);
+        ESP_LOGD(TAG, "Received message with enum number: %d", incoming_message);
 
         alarm_queue_message_t outgoing_message;
         switch (incoming_message)
@@ -139,7 +141,7 @@ esp_err_t buzzer_init(void)
         goto cleanup_gpio;
     }
 
-    BaseType_t rtos_ret = xTaskCreate(buzzer_task_handler, "Buzzer", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &buzzer_task_handle);
+    BaseType_t rtos_ret = xTaskCreate(buzzer_task_handler, "Buzzer", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &buzzer_task_handle);
     if (rtos_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to create buzzer task with error code: %d", rtos_ret);
@@ -147,7 +149,7 @@ esp_err_t buzzer_init(void)
         goto cleanup_gpio;
     }
 
-    rtos_ret = xTaskCreate(alarm_task_handler, "Buzzer Alarm", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &alarm_task_handle);
+    rtos_ret = xTaskCreate(alarm_task_handler, "Buzzer Alarm", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &alarm_task_handle);
     if (rtos_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to create alarm task with error code: %d", rtos_ret);

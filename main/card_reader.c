@@ -6,6 +6,7 @@
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 
+#include "app_config.h"
 #include "queue.h"
 
 #define CARD_READER_UART_RX_BUFFER_SIZE 256
@@ -154,7 +155,15 @@ esp_err_t card_reader_init(void)
         goto cleanup_gpio;
     }
 
-    BaseType_t rtos_ret = xTaskCreate(card_reader_task_handler, "Card Reader", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
+    ESP_LOGD(TAG, "Setting enable pin level to low...");
+    esp_ret = gpio_set_level(CARD_READER_GPIO_ENABLE, 0);
+    if (esp_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to set enable pin level to low: %s", esp_err_to_name(esp_ret));
+        goto cleanup_uart;
+    }
+
+    BaseType_t rtos_ret = xTaskCreate(card_reader_task_handler, "Card Reader", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to create card reader task with error code: %d", rtos_ret);

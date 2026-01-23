@@ -26,3 +26,5 @@
 // ########################
 
 #define APP_CONFIG_RFID_UART_RX_BUF_SIZE 256
+
+#define APP_CONFIG_TASK_STACK_SIZE 8192
