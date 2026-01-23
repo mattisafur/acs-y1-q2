@@ -60,7 +60,7 @@ static void time_of_flight_handler(void *)
 
                         const metric_t metric_tof_distance = {
                             .metric_type = METRIC_TYPE_TIME_OF_FLIGHT_DISTANCE,
-                            .timestamp = 0,
+                            .timestamp = time(NULL),
                             .float_value = read.distance_mm,
                         };
 

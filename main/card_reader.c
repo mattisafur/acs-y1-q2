@@ -60,7 +60,7 @@ static void card_reader_task_handler(void *)
 
                     metric_t metric_card_reader_valid = {
                         .metric_type = METRIC_TYPE_CARD_READER_VALID,
-                        .timestamp = 0,
+                        .timestamp = time(NULL),
                         .bool_value = valid ? true : false,
                     };
                     xQueueSendToBack(queue_metrics_handle, &metric_card_reader_valid, portMAX_DELAY);
@@ -82,7 +82,7 @@ static void card_reader_task_handler(void *)
 
                     metric_t metric_card_reader_valid = {
                         .metric_type = METRIC_TYPE_CARD_READER_VALID,
-                        .timestamp = 0,
+                        .timestamp = time(NULL),
                         .bool_value = valid ? true : false,
                     };
                     xQueueSendToBack(queue_metrics_handle, &metric_card_reader_valid, portMAX_DELAY);
