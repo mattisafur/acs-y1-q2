@@ -130,6 +130,7 @@ static void accelerometer_task_handler(void *)
 
 esp_err_t accelerometer_init(void)
 {
+    ESP_LOGD(TAG, "Initializing device descriptor...");
     esp_err_t esp_ret = mpu6050_init_desc(&device, I2C_ACCELEROMETER_ADDR, I2C_NUM, PIN_I2C_SDA, PIN_I2C_SCL);
     if (esp_ret != ESP_OK)
     {
@@ -140,9 +141,11 @@ esp_err_t accelerometer_init(void)
     unsigned int failed_tries = 0;
     for (;;)
     {
+        ESP_LOGD(TAG, "Probing for device...");
         esp_ret = i2c_dev_probe(&device.i2c_dev, I2C_DEV_WRITE);
         if (esp_ret == ESP_OK)
         {
+            ESP_LOGD(TAG, "Device probed successfully");
             break;
         }
 
@@ -158,6 +161,7 @@ esp_err_t accelerometer_init(void)
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 
+    ESP_LOGD(TAG, "Initializing initializing device...");
     esp_ret = mpu6050_init(&device);
     if (esp_ret != ESP_OK)
     {
@@ -165,6 +169,7 @@ esp_err_t accelerometer_init(void)
         goto cleanup_device_descriptor;
     }
 
+    ESP_LOGD(TAG, "Initializing accelerometer freertos task...");
     BaseType_t rtos_ret = xTaskCreate(accelerometer_task_handler, "Accelerometer", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {

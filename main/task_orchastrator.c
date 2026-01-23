@@ -64,6 +64,7 @@ static void task_orchastrator_handler(void *)
 
 esp_err_t task_orchastrator_init(void)
 {
+    ESP_LOGD(TAG, "Initializing I2C master bus...");
     esp_err_t esp_ret = i2c_master_bus_init();
     if (esp_ret != ESP_OK)
     {
@@ -71,6 +72,7 @@ esp_err_t task_orchastrator_init(void)
         goto cleanup_nothing;
     }
 
+    ESP_LOGD(TAG, "Initializing accelerometer...");
     esp_ret = accelerometer_init();
     if (esp_ret != ESP_OK)
     {
@@ -78,6 +80,7 @@ esp_err_t task_orchastrator_init(void)
         goto cleanup_i2c_master_bus;
     }
 
+    ESP_LOGD(TAG, "Initializing buzzer...");
     esp_ret = buzzer_init();
     if (esp_ret != ESP_OK)
     {
@@ -85,20 +88,23 @@ esp_err_t task_orchastrator_init(void)
         goto cleanup_accelerometer;
     }
 
+    ESP_LOGD(TAG, "Initializing card reader");
     esp_ret = card_reader_init();
     if (esp_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to initialize card_reader: %s", esp_err_to_name(esp_ret));
+        ESP_LOGE(TAG, "Failed to initialize card reader: %s", esp_err_to_name(esp_ret));
         goto cleanup_buzzer;
     }
 
+    ESP_LOGD(TAG, "Initializing time of flight sensor...");
     esp_ret = time_of_flight_init();
     if (esp_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to initialize time_of_flight: %s", esp_err_to_name(esp_ret));
+        ESP_LOGE(TAG, "Failed to initialize time of flight sensor: %s", esp_err_to_name(esp_ret));
         goto cleanup_card_reader;
     }
 
+    ESP_LOGD(TAG, "creating task orchastrator freertos task...");
     BaseType_t rtos_ret = xTaskCreate(task_orchastrator_handler, "Task Orchastrator", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {
