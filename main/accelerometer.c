@@ -5,14 +5,15 @@
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <i2cdev.h>
 #include <math.h>
 #include <mpu6050.h>
 
 #include "queue.h"
 
 #define ACCELEROMETER_I2C_PORT_NUM I2C_NUM_1
-#define ACCELEROMETER_I2C_GPIO_SDA GPIO_NUM_26
-#define ACCELEROMETER_I2C_GPIO_SCL GPIO_NUM_27
+#define ACCELEROMETER_I2C_GPIO_SDA GPIO_NUM_32
+#define ACCELEROMETER_I2C_GPIO_SCL GPIO_NUM_33
 
 #define ACCELEROMETER_I2C_ADDR 0x68
 
@@ -23,7 +24,7 @@ static const char *TAG = "accelerometer";
 
 static TaskHandle_t task_handle;
 
-static mpu6050_dev_t device;
+static mpu6050_dev_t device_descriptor;
 
 static float vec3_sum(float x, float y, float z) { return sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2)); }
 
@@ -58,7 +59,7 @@ static void accelerometer_task_handler(void *)
             mpu6050_acceleration_t acceleration;
             mpu6050_rotation_t rotation;
 
-            ret = mpu6050_get_motion(&device, &acceleration, &rotation);
+            ret = mpu6050_get_motion(&device_descriptor, &acceleration, &rotation);
             if (ret != ESP_OK)
             {
                 ESP_LOGE(TAG, "Failed to get motion: %s", esp_err_to_name(ret));
@@ -131,19 +132,30 @@ static void accelerometer_task_handler(void *)
 
 esp_err_t accelerometer_init(void)
 {
+    ESP_LOGD(TAG, "Intializing i2cdev...");
+    esp_err_t esp_ret = i2cdev_init();
+    if (esp_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to initialize i2cdev: %s", esp_err_to_name(esp_ret));
+        goto cleanup_nothing;
+    }
+
     ESP_LOGD(TAG, "Initializing device descriptor...");
-    esp_err_t esp_ret = mpu6050_init_desc(&device, ACCELEROMETER_I2C_ADDR, ACCELEROMETER_I2C_PORT_NUM, ACCELEROMETER_I2C_GPIO_SDA, ACCELEROMETER_I2C_GPIO_SCL);
+    esp_ret = mpu6050_init_desc(&device_descriptor, ACCELEROMETER_I2C_ADDR, ACCELEROMETER_I2C_PORT_NUM, ACCELEROMETER_I2C_GPIO_SDA, ACCELEROMETER_I2C_GPIO_SCL);
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed initializing device descriptor: %s", esp_err_to_name(esp_ret));
-        goto cleanup_device_descriptor;
+        goto cleanup_nothing;
     }
 
-    unsigned int failed_tries = 0;`
+    device_descriptor.i2c_dev.cfg.sda_pullup_en = GPIO_PULLUP_ENABLE;
+    device_descriptor.i2c_dev.cfg.scl_pullup_en = GPIO_PULLUP_ENABLE;
+
+    unsigned int failed_tries = 0;
     for (;;)
     {
         ESP_LOGD(TAG, "Probing for device...");
-        esp_ret = i2c_dev_probe(&device.i2c_dev, I2C_DEV_WRITE);
+        esp_ret = i2c_dev_probe(&device_descriptor.i2c_dev, I2C_DEV_WRITE);
         if (esp_ret == ESP_OK)
         {
             ESP_LOGD(TAG, "Device probed successfully");
@@ -163,7 +175,7 @@ esp_err_t accelerometer_init(void)
     }
 
     ESP_LOGD(TAG, "Initializing initializing device...");
-    esp_ret = mpu6050_init(&device);
+    esp_ret = mpu6050_init(&device_descriptor);
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to initialize device: %s", esp_err_to_name(esp_ret));
@@ -182,13 +194,13 @@ esp_err_t accelerometer_init(void)
     return ESP_OK;
 
 cleanup_device_descriptor:
-    esp_err_t cleanup_esp_ret = mpu6050_free_desc(&device);
+    esp_err_t cleanup_esp_ret = mpu6050_free_desc(&device_descriptor);
     if (cleanup_esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to free device descriptor: %s", esp_err_to_name(cleanup_esp_ret));
         abort();
     }
-
+cleanup_nothing:
     return esp_ret;
 }
 
@@ -197,7 +209,7 @@ esp_err_t accelerometer_deinit(void)
     vTaskDelete(task_handle);
     task_handle = NULL;
 
-    esp_err_t ret = mpu6050_free_desc(&device);
+    esp_err_t ret = mpu6050_free_desc(&device_descriptor);
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to free device descriptor: %s", esp_err_to_name(ret));

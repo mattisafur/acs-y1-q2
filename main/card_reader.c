@@ -8,16 +8,16 @@
 
 #include "queue.h"
 
-#define RFID_RX_BUF_SIZE 256
-#define RFID_DEBOUNCE_MS 300
-#define RFID_READ_TIMEOUT_MS 500
-#define RFID_UID_MAX_LEN 10
-#define RFID_UART_NUM UART_NUM_2
-#define RFID_BAUD_RATE 2400
-#define PIN_CARD_READER_UART_RX GPIO_NUM_32
-#define PIN_CARD_READER_UART_TX GPIO_NUM_39
-#define PIN_CARD_READER_ENABLE GPIO_NUM_33
-#define RFID_TAG_ID "01004B1DA2"
+#define CARD_READER_UART_RX_BUFFER_SIZE 256
+#define CARD_READER_DEBOUNCE_MS 300
+#define CARD_READER_TIMEOUT_MS 500
+#define CARD_READER_UID_MAX_LEN 10
+#define CARD_READER_UART_NUM UART_NUM_1
+#define CARD_READER_UART_BAUD_RATE 2400
+#define CARD_READER_UART_GPIO_RX GPIO_NUM_26
+#define CARD_READER_UART_GPIO_TX GPIO_NUM_25
+#define CARD_READER_GPIO_ENABLE GPIO_NUM_27
+#define CARD_READER_TAG_ID "01004B1DA2"
 
 static const char *TAG = "card reader";
 
@@ -33,7 +33,7 @@ static void card_reader_task_handler(void *)
         uint8_t uid[12] = {0};
         size_t uid_len = sizeof(uid);
 
-        int len = uart_read_bytes(RFID_UART_NUM, uid, uid_len, pdMS_TO_TICKS(100));
+        int len = uart_read_bytes(CARD_READER_UART_NUM, uid, uid_len, pdMS_TO_TICKS(100));
         if (len > 0)
         {
             uid[len] = '\0'; // Null-terminate the received data
@@ -43,7 +43,7 @@ static void card_reader_task_handler(void *)
                 char id[11];
                 memcpy(id, &uid[1], 10);
                 id[10] = '\0';
-                if (strcmp(id, RFID_TAG_ID) == 0)
+                if (strcmp(id, CARD_READER_TAG_ID) == 0)
                 {
                     ESP_LOGI(TAG, "Valid RFID tag detected: %s", id);
                     valid = true;
@@ -91,7 +91,7 @@ static void card_reader_task_handler(void *)
             while (len > 0)
             {
                 uint8_t discard;
-                len = uart_read_bytes(RFID_UART_NUM, &discard, 1, pdMS_TO_TICKS(1000));
+                len = uart_read_bytes(CARD_READER_UART_NUM, &discard, 1, pdMS_TO_TICKS(1000));
             }
         }
     }
@@ -100,7 +100,7 @@ static void card_reader_task_handler(void *)
 esp_err_t card_reader_init(void)
 {
     uart_config_t uart_config = {
-        .baud_rate = RFID_BAUD_RATE,
+        .baud_rate = CARD_READER_UART_BAUD_RATE,
         .data_bits = UART_DATA_8_BITS,
         .parity = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1,
@@ -108,7 +108,7 @@ esp_err_t card_reader_init(void)
         .source_clk = UART_SCLK_APB,
     };
     // Set UART parameters
-    esp_err_t esp_ret = uart_param_config(RFID_UART_NUM, &uart_config);
+    esp_err_t esp_ret = uart_param_config(CARD_READER_UART_NUM, &uart_config);
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to configure UART parameters: %s", esp_err_to_name(esp_ret));
@@ -116,9 +116,9 @@ esp_err_t card_reader_init(void)
     }
 
     // Set UART pins
-    esp_ret = uart_set_pin(RFID_UART_NUM,
-                           PIN_CARD_READER_UART_TX,
-                           PIN_CARD_READER_UART_RX,
+    esp_ret = uart_set_pin(CARD_READER_UART_NUM,
+                           CARD_READER_UART_GPIO_TX,
+                           CARD_READER_UART_GPIO_RX,
                            UART_PIN_NO_CHANGE,
                            UART_PIN_NO_CHANGE);
     if (esp_ret != ESP_OK)
@@ -128,8 +128,8 @@ esp_err_t card_reader_init(void)
     }
 
     // Install UART driver ONCE
-    esp_ret = uart_driver_install(RFID_UART_NUM,
-                                  RFID_RX_BUF_SIZE,
+    esp_ret = uart_driver_install(CARD_READER_UART_NUM,
+                                  CARD_READER_UART_RX_BUFFER_SIZE,
                                   0,
                                   0,
                                   NULL,
@@ -140,7 +140,7 @@ esp_err_t card_reader_init(void)
         goto cleanup_uart;
     }
     gpio_config_t config_enable = {
-        .pin_bit_mask = 1ULL << PIN_CARD_READER_ENABLE,
+        .pin_bit_mask = 1ULL << CARD_READER_GPIO_ENABLE,
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -165,14 +165,14 @@ esp_err_t card_reader_init(void)
     return ESP_OK;
 
 cleanup_uart:
-    esp_err_t cleanup_esp_ret = uart_driver_delete(RFID_UART_NUM);
+    esp_err_t cleanup_esp_ret = uart_driver_delete(CARD_READER_UART_NUM);
     if (cleanup_esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to delete UART driver: %s. aborting program", esp_err_to_name(cleanup_esp_ret));
         abort();
     }
 cleanup_gpio:
-    cleanup_esp_ret = gpio_reset_pin(PIN_CARD_READER_ENABLE);
+    cleanup_esp_ret = gpio_reset_pin(CARD_READER_GPIO_ENABLE);
     if (cleanup_esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to reset the gpio pin: %s. aborting program", esp_err_to_name(cleanup_esp_ret));
@@ -186,14 +186,14 @@ esp_err_t card_reader_deinit(void)
     vTaskDelete(task_handle);
     task_handle = NULL;
 
-    esp_err_t ret = uart_driver_delete(RFID_UART_NUM);
+    esp_err_t ret = uart_driver_delete(CARD_READER_UART_NUM);
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to delete UART driver: %s", esp_err_to_name(ret));
         return ret;
     }
 
-    ret = gpio_reset_pin(PIN_CARD_READER_ENABLE);
+    ret = gpio_reset_pin(CARD_READER_GPIO_ENABLE);
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to reset the gpio pin: %s", esp_err_to_name(ret));

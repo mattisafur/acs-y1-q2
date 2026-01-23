@@ -72,7 +72,7 @@ static void time_of_flight_handler(void *)
                 }
                 else
                 {
-                    ESP_LOGE(TAG, "Measurement error with status: %d", read.status);
+                    ESP_LOGW(TAG, "Invalid/weak measurement, status code: %d", read.status);
                 }
             }
             else
