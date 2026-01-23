@@ -80,49 +80,49 @@ static void accelerometer_task_handler(void *)
 
             const metric_t metric_acceleration_x = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ACCELERATION_X,
-                .timestamp = 0,
+                .timestamp = time(NULL),
                 .float_value = acceleration.x,
             };
             xQueueSendToBack(queue_metrics_handle, &metric_acceleration_x, portMAX_DELAY);
             const metric_t metric_acceleration_y = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ACCELERATION_Y,
-                .timestamp = 0,
+                .timestamp = time(NULL),
                 .float_value = acceleration.y,
             };
             xQueueSendToBack(queue_metrics_handle, &metric_acceleration_y, portMAX_DELAY);
             const metric_t metric_acceleration_z = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ACCELERATION_Z,
-                .timestamp = 0,
+                .timestamp = time(NULL),
                 .float_value = acceleration.z,
             };
             xQueueSendToBack(queue_metrics_handle, &metric_acceleration_z, portMAX_DELAY);
             const metric_t metric_acceleration_total = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ACCELERATION_TOTAL,
-                .timestamp = 0,
+                .timestamp = time(NULL),
                 .float_value = acceleration_sum,
             };
             xQueueSendToBack(queue_metrics_handle, &metric_acceleration_total, portMAX_DELAY);
             const metric_t metric_rotation_x = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ROTATION_X,
-                .timestamp = 0,
+                .timestamp = time(NULL),
                 .float_value = rotation.x,
             };
             xQueueSendToBack(queue_metrics_handle, &metric_rotation_x, portMAX_DELAY);
             const metric_t metric_rotation_y = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ROTATION_Y,
-                .timestamp = 0,
+                .timestamp = time(NULL),
                 .float_value = rotation.y,
             };
             xQueueSendToBack(queue_metrics_handle, &metric_rotation_y, portMAX_DELAY);
             const metric_t metric_rotation_z = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ROTATION_Z,
-                .timestamp = 0,
+                .timestamp = time(NULL),
                 .float_value = rotation.z,
             };
             xQueueSendToBack(queue_metrics_handle, &metric_rotation_z, portMAX_DELAY);
             const metric_t metric_rotation_total = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ROTATION_TOTAL,
-                .timestamp = 0,
+                .timestamp = time(NULL),
                 .float_value = rotation_sum,
             };
             xQueueSendToBack(queue_metrics_handle, &metric_rotation_total, portMAX_DELAY);
@@ -147,9 +147,6 @@ esp_err_t accelerometer_init(void)
         ESP_LOGE(TAG, "Failed initializing device descriptor: %s", esp_err_to_name(esp_ret));
         goto cleanup_nothing;
     }
-
-    device_descriptor.i2c_dev.cfg.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    device_descriptor.i2c_dev.cfg.scl_pullup_en = GPIO_PULLUP_ENABLE;
 
     unsigned int failed_tries = 0;
     for (;;)

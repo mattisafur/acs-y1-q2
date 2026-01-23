@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "accelerometer.c"
+    SRCS "time_sync.c" "wifi_manager.c" "accelerometer.c"
          "buzzer.c"
          "card_reader.c"
          "main.c"
@@ -7,6 +7,7 @@ idf_component_register(
          "queue.c"
          "task_orchastrator.c"
          "time_of_flight.c"
+            
     
     INCLUDE_DIRS "."
     
