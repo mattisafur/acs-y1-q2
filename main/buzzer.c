@@ -29,6 +29,11 @@ typedef enum alarm_queue_message_t
     ALARM_QUEUE_MESSAGE_STOP,
 } alarm_queue_message_t;
 
+/**
+ * @brief Task handler for buzzer control.
+ * Processes messages from the buzzer queue and controls the alarm.
+ * @param pvParameters Unused.
+ */
 static void buzzer_task_handler(void *)
 {
     for (;;)
@@ -107,6 +112,11 @@ static void buzzer_task_handler(void *)
     }
 }
 
+/**
+ * @brief Task handler for alarm sound generation.
+ * Generates the alarm beep pattern when enabled.
+ * @param pvParameters Unused.
+ */
 static void alarm_task_handler(void *)
 {
     bool enabled = false;
@@ -158,6 +168,11 @@ static void alarm_task_handler(void *)
     }
 }
 
+/**
+ * @brief Initializes the buzzer module.
+ * Configures GPIO, creates tasks and queue.
+ * @return ESP_OK on success, error code on failure.
+ */
 esp_err_t buzzer_init(void)
 {
     const gpio_config_t config = {
@@ -222,6 +237,11 @@ cleanup_gpio:
     return esp_ret;
 }
 
+/**
+ * @brief Deinitializes the buzzer module.
+ * Deletes tasks and resets GPIO.
+ * @return ESP_OK on success, error code on failure.
+ */
 esp_err_t buzzer_deinit(void)
 {
     vTaskDelete(alarm_task_handle);

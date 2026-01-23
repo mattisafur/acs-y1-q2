@@ -29,8 +29,20 @@ static mpu6050_dev_t device_descriptor;
 // static float acceleration_bias[3];
 // static float rotation_bias[3];
 
+/**
+ * @brief Calculates the Euclidean norm of a 3D vector.
+ * @param x X component.
+ * @param y Y component.
+ * @param z Z component.
+ * @return The norm.
+ */
 static float vec3_sum(float x, float y, float z) { return sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2)); }
 
+/**
+ * @brief Task handler for accelerometer monitoring.
+ * Continuously reads sensor data and sends alerts if thresholds are exceeded.
+ * @param pvParameters Unused.
+ */
 static void accelerometer_task_handler(void *)
 {
     bool enabled = true;
@@ -137,6 +149,11 @@ static void accelerometer_task_handler(void *)
     }
 }
 
+/**
+ * @brief Initializes the accelerometer module.
+ * Sets up I2C, probes the device, calibrates, and starts the task.
+ * @return ESP_OK on success, error code on failure.
+ */
 esp_err_t accelerometer_init(void)
 {
     ESP_LOGD(TAG, "Intializing i2cdev...");
@@ -216,6 +233,11 @@ cleanup_nothing:
     return esp_ret;
 }
 
+/**
+ * @brief Deinitializes the accelerometer module.
+ * Deletes the task and frees resources.
+ * @return ESP_OK on success, error code on failure.
+ */
 esp_err_t accelerometer_deinit(void)
 {
     vTaskDelete(task_handle);
