@@ -15,7 +15,7 @@
 
 static const char *TAG = "metrics publisher";
 
-#define METRICS_PUBLISHER_ENDPOINT_URL "https://4.233.137.69/metrics"
+#define METRICS_PUBLISHER_ENDPOINT_URL "http://4.233.137.69/metrics"
 
 static TaskHandle_t task_handle;
 
@@ -103,6 +103,8 @@ static void metrics_publisher_handler(void *)
         {
             ESP_LOGE(TAG, "Failed to perform POST request: %s. conetnt: %s", esp_err_to_name(ret), metric_json);
         }
+
+        cJSON_free(metric_json);
     }
 }
 
@@ -110,17 +112,24 @@ static esp_err_t http_event_handler(esp_http_client_event_t *event) { return ESP
 
 esp_err_t metrics_publisher_init(void)
 {
+    esp_err_t esp_ret;
     esp_http_client_config_t http_client_config = {
         .url = METRICS_PUBLISHER_ENDPOINT_URL,
         .event_handler = http_event_handler,
         .method = HTTP_METHOD_POST,
     };
     http_client_handle = esp_http_client_init(&http_client_config);
-
-    BaseType_t ret = xTaskCreate(metrics_publisher_handler, "Metrics publisher", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
-    if (ret != pdPASS)
+    if (http_client_handle == NULL)
     {
-        ESP_LOGE(TAG, "Failed to craete task with error code: %d", ret);
+        ESP_LOGE(TAG, "Failed to initialize http client.");
+        goto cleanup_none;
+    }
+
+    BaseType_t rtos_ret = xTaskCreate(metrics_publisher_handler, "Metrics publisher", 8192, NULL, tskIDLE_PRIORITY, &task_handle);
+    if (rtos_ret != pdPASS)
+    {
+        ESP_LOGE(TAG, "Failed to craete task with error code: %d", rtos_ret);
+        esp_ret = ESP_FAIL;
         goto cleanup_http_client;
     }
 
@@ -133,7 +142,8 @@ cleanup_http_client:
         ESP_LOGE(TAG, "Failed to clean up HTTP client: %s. aborting program.", esp_err_to_name(cleanup_ret));
         abort();
     }
-    return cleanup_ret;
+cleanup_none:
+    return esp_ret;
 }
 
 esp_err_t metrics_publisher_deinit(void)
