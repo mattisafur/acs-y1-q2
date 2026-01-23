@@ -19,9 +19,11 @@ static const char *TAG = "buzzer";
 static TaskHandle_t buzzer_task_handle;
 static TaskHandle_t alarm_task_handle;
 
+static bool alarm_running = false;
+
 static QueueHandle_t alarm_queue_handle;
 
-typedef enum
+typedef enum alarm_queue_message_t
 {
     ALARM_QUEUE_MESSAGE_START,
     ALARM_QUEUE_MESSAGE_STOP,
@@ -33,7 +35,7 @@ static void buzzer_task_handler(void *)
     {
         message_t incoming_message;
         xQueueReceive(queue_buzzer_handle, &incoming_message, portMAX_DELAY);
-        ESP_LOGD(TAG, "Received message with enum number: %d", incoming_message);
+        ESP_LOGD(TAG, "Received message from buzzer queue: %d", incoming_message);
 
         alarm_queue_message_t outgoing_message;
         switch (incoming_message)
@@ -41,28 +43,41 @@ static void buzzer_task_handler(void *)
         case MESSAGE_BUZZER_ALARM_START:
             outgoing_message = ALARM_QUEUE_MESSAGE_START;
             xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
+            alarm_running = true;
             break;
 
         case MESSAGE_BUZZER_ALARM_STOP:
             outgoing_message = ALARM_QUEUE_MESSAGE_STOP;
             xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
+            alarm_running = false;
             break;
 
         case MESSAGE_BUZZER_CARD_VALID:
-            outgoing_message = ALARM_QUEUE_MESSAGE_STOP;
-            xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
-
+            if (alarm_running)
+            {
+                ESP_LOGD(TAG, "Temporarily stopping alarm");
+                outgoing_message = ALARM_QUEUE_MESSAGE_STOP;
+                xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
+            }
             gpio_set_level(PIN_BUZZER, 1);
             vTaskDelay(pdMS_TO_TICKS(150));
             gpio_set_level(PIN_BUZZER, 0);
 
-            outgoing_message = ALARM_QUEUE_MESSAGE_START;
-            xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
+            if (alarm_running)
+            {
+                ESP_LOGD(TAG, "Statring alarm back after stop");
+                outgoing_message = ALARM_QUEUE_MESSAGE_START;
+                xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
+            }
             break;
 
         case MESSAGE_BUZZER_CARD_INVALID:
-            outgoing_message = ALARM_QUEUE_MESSAGE_STOP;
-            xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
+            if (alarm_running)
+            {
+                ESP_LOGD(TAG, "Temporarily stopping alarm");
+                outgoing_message = ALARM_QUEUE_MESSAGE_STOP;
+                xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
+            }
 
             gpio_set_level(PIN_BUZZER, 1);
             vTaskDelay(pdMS_TO_TICKS(50));
@@ -77,12 +92,16 @@ static void buzzer_task_handler(void *)
             gpio_set_level(PIN_BUZZER, 0);
             vTaskDelay(pdMS_TO_TICKS(50));
 
-            outgoing_message = ALARM_QUEUE_MESSAGE_START;
-            xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
+            if (alarm_running)
+            {
+                ESP_LOGD(TAG, "Statring alarm back after stop");
+                outgoing_message = ALARM_QUEUE_MESSAGE_START;
+                xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
+            }
             break;
 
         default:
-            ESP_LOGE(TAG, "Received invalid message from queue, message num: %d", outgoing_message);
+            ESP_LOGE(TAG, "Received invalid message from buzzer queue, message num: %d", outgoing_message);
             break;
         }
     }
@@ -90,37 +109,51 @@ static void buzzer_task_handler(void *)
 
 static void alarm_task_handler(void *)
 {
-    alarm_queue_message_t msg;
+    bool enabled = false;
+    alarm_queue_message_t message;
     for (;;)
     {
 
-        const BaseType_t ret = xQueueReceive(alarm_queue_handle, &msg, 0);
+        const BaseType_t ret = xQueueReceive(alarm_queue_handle, &message, 0);
 
-        switch (msg)
+        if (ret == pdTRUE)
         {
-        case ALARM_QUEUE_MESSAGE_START:
+            ESP_LOGD(TAG, "Received message from alarm queue: %d", message);
+
+            switch (message)
+            {
+            case ALARM_QUEUE_MESSAGE_START:
+                enabled = true;
+                break;
+
+            case ALARM_QUEUE_MESSAGE_STOP:
+                enabled = false;
+                if (ret == pdTRUE)
+                {
+                    gpio_set_level(PIN_BUZZER, 0);
+                    vTaskDelay(pdMS_TO_TICKS(50));
+                }
+                break;
+
+            default:
+                if (ret == pdTRUE)
+                {
+                    ESP_LOGE(TAG, "Received invalid message from alarm queue, message num: %d", message);
+                }
+                break;
+            }
+        }
+
+        if (enabled)
+        {
             gpio_set_level(PIN_BUZZER, 1);
             vTaskDelay(pdMS_TO_TICKS(50));
             gpio_set_level(PIN_BUZZER, 0);
             vTaskDelay(pdMS_TO_TICKS(100));
-            break;
-
-        case ALARM_QUEUE_MESSAGE_STOP:
-            if (ret == pdTRUE)
-            {
-                gpio_set_level(PIN_BUZZER, 0);
-                vTaskDelay(pdMS_TO_TICKS(50));
-                ESP_LOGI(TAG, "Alarm stopped");
-            }
-
-            break;
-
-        default:
-            if (ret == pdTRUE)
-            {
-                ESP_LOGE(TAG, "Received invalid message from queue, message num: %d", msg);
-            }
-            break;
+        }
+        else
+        {
+            vTaskDelay(pdMS_TO_TICKS(10));
         }
     }
 }

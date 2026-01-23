@@ -14,10 +14,10 @@ extern QueueHandle_t queue_accelerometer_handle;
 extern QueueHandle_t queue_time_of_flight_handle;
 extern QueueHandle_t queue_metrics_handle;
 
-typedef enum
+typedef enum message_t
 {
-    MESSAGE_ENABLE,
-    MESSAGE_DISABLE,
+    MESSAGE_ENABLE,  // enable task
+    MESSAGE_DISABLE, // disbale task
     MESSAGE_SENSOR_TRIGGERED,
     MESSAGE_BUZZER_ALARM_START,
     MESSAGE_BUZZER_ALARM_STOP,
@@ -27,7 +27,7 @@ typedef enum
     MESSAGE_CARD_READER_CARD_INVALID,
 } message_t;
 
-typedef enum
+typedef enum component_t
 {
     COMPONENT_BUZZER,
     COMPONENT_CARD_READER,
@@ -35,13 +35,13 @@ typedef enum
     COMPONENT_TIME_OF_FLIGHT,
 } component_t;
 
-typedef struct
+typedef struct orchastrator_return_message_t
 {
     component_t component;
     message_t message;
 } orchastrator_return_message_t;
 
-typedef enum
+typedef enum metric_type_t
 {
     METRIC_TYPE_ACCELEROMETER_ACCELERATION_X,
     METRIC_TYPE_ACCELEROMETER_ACCELERATION_Y,
@@ -55,7 +55,7 @@ typedef enum
     METRIC_TYPE_CARD_READER_VALID,
 } metric_type_t;
 
-typedef struct
+typedef struct metric_t
 {
     metric_type_t metric_type;
     time_t timestamp;
@@ -68,4 +68,5 @@ typedef struct
 } metric_t;
 
 esp_err_t queue_init(void);
+
 void queue_deinit(void);
