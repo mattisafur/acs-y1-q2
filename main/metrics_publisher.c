@@ -99,7 +99,7 @@ static void metrics_publisher_handler(void *)
         metric_t msg;
         xQueueReceive(queue_metrics_handle, &msg, portMAX_DELAY);
 
-        (void)metric_to_cjson(&msg);
+        cJSON *json_metric = metric_to_cjson(&msg);
     }
 }
 
@@ -136,7 +136,7 @@ static void wifi_event_handler(void *, esp_event_base_t event_base, int32_t even
     }
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
     {
-        (void)event_data;
+        ip_event_got_ip_t *got_ip_event = event_data;
         wifi_reconnect_count = 0;
         xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
     }
