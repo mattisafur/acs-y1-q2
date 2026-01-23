@@ -17,6 +17,7 @@ static const char *TAG = "time of flight";
 #define TIME_OF_FLIGHT_I2C_ADDR 0x29
 #define TIME_OF_FLIGHT_MACRO_TIMING 16
 #define TIME_OF_FLIGHT_INTERMEASUREMENT_MS 100
+#define TIME_OF_FLIGHT_DISTANCE_THREASHOLD_MM 200
 
 static TaskHandle_t task_handle;
 
@@ -52,33 +53,28 @@ static void time_of_flight_handler(void *)
             esp_err_t tof_err = vl53l1x_read(&device_descriptor, &read, 200);
             if (tof_err == ESP_OK)
             {
-                if (read.status == 0)
+                if (read.status != 0)
                 {
-                    if (read.distance_mm > 200)
-                    {
-                        const orchastrator_return_message_t tof_message = {
-                            .component = COMPONENT_TIME_OF_FLIGHT,
-                            .message = MESSAGE_SENSOR_TRIGGERED,
-                        };
-                        xQueueSendToBack(queue_task_return_handle, &tof_message, portMAX_DELAY);
-
-                        const metric_t metric_tof_distance = {
-                            .metric_type = METRIC_TYPE_TIME_OF_FLIGHT_DISTANCE,
-                            .timestamp = time(NULL),
-                            .float_value = read.distance_mm,
-                        };
-
-                        xQueueSendToBack(queue_metrics_handle, &metric_tof_distance, portMAX_DELAY);
-                    }
+                    ESP_LOGE(TAG, "Failed to read measurements: %s", esp_err_to_name(tof_err));
+                    continue;
                 }
-                else
+
+                if (read.distance_mm > TIME_OF_FLIGHT_DISTANCE_THREASHOLD_MM)
                 {
-                    ESP_LOGW(TAG, "Invalid/weak measurement, status code: %d", read.status);
+                    const orchastrator_return_message_t tof_message = {
+                        .component = COMPONENT_TIME_OF_FLIGHT,
+                        .message = MESSAGE_SENSOR_TRIGGERED,
+                    };
+                    xQueueSendToBack(queue_task_return_handle, &tof_message, portMAX_DELAY);
+
+                    const metric_t metric_tof_distance = {
+                        .metric_type = METRIC_TYPE_TIME_OF_FLIGHT_DISTANCE,
+                        .timestamp = time(NULL),
+                        .float_value = read.distance_mm,
+                    };
+
+                    xQueueSendToBack(queue_metrics_handle, &metric_tof_distance, 0);
                 }
-            }
-            else
-            {
-                ESP_LOGE(TAG, "Failed to read measurements: %s", esp_err_to_name(tof_err));
             }
         }
         vTaskDelay(pdMS_TO_TICKS(100));

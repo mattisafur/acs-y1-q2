@@ -31,6 +31,7 @@ static void buzzer_task_handler(void *)
 {
     for (;;)
     {
+        
         message_t incoming_message;
         xQueueReceive(queue_buzzer_handle, &incoming_message, portMAX_DELAY);
         ESP_LOGD(TAG, "Received message with enum number: %d", incoming_message);
@@ -90,30 +91,37 @@ static void buzzer_task_handler(void *)
 
 static void alarm_task_handler(void *)
 {
+    alarm_queue_message_t msg;
     for (;;)
     {
-        alarm_queue_message_t msg;
-        const BaseType_t ret = xQueueReceive(queue_buzzer_handle, &msg, 0);
 
-        if (ret == pdTRUE)
+        const BaseType_t ret = xQueueReceive(alarm_queue_handle, &msg, 0);
+
+        switch (msg)
         {
-            switch (msg)
+        case ALARM_QUEUE_MESSAGE_START:
+            gpio_set_level(PIN_BUZZER, 1);
+            vTaskDelay(pdMS_TO_TICKS(50));
+            gpio_set_level(PIN_BUZZER, 0);
+            vTaskDelay(pdMS_TO_TICKS(100));
+            break;
+
+        case ALARM_QUEUE_MESSAGE_STOP:
+            if (ret == pdTRUE)
             {
-            case ALARM_QUEUE_MESSAGE_START:
-                gpio_set_level(PIN_BUZZER, 1);
-                vTaskDelay(pdMS_TO_TICKS(50));
                 gpio_set_level(PIN_BUZZER, 0);
-                vTaskDelay(pdMS_TO_TICKS(100));
-                break;
-
-            case ALARM_QUEUE_MESSAGE_STOP:
-                vTaskDelay(pdMS_TO_TICKS(10));
-                break;
-
-            default:
-                ESP_LOGE(TAG, "Received invalid message from queue, message num: %d", msg);
-                break;
+                vTaskDelay(pdMS_TO_TICKS(50));
+                ESP_LOGI(TAG, "Alarm stopped");
             }
+
+            break;
+
+        default:
+            if (ret == pdTRUE)
+            {
+                ESP_LOGE(TAG, "Received invalid message from queue, message num: %d", msg);
+            }
+            break;
         }
     }
 }

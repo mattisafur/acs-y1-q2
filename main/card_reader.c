@@ -30,7 +30,7 @@ static void card_reader_task_handler(void *)
     bool valid = false;
     for (;;)
     {
-
+        
         uint8_t uid[12] = {0};
         size_t uid_len = sizeof(uid);
 
@@ -64,7 +64,7 @@ static void card_reader_task_handler(void *)
                         .timestamp = time(NULL),
                         .bool_value = valid ? true : false,
                     };
-                    xQueueSendToBack(queue_metrics_handle, &metric_card_reader_valid, portMAX_DELAY);
+                    xQueueSendToBack(queue_metrics_handle, &metric_card_reader_valid, 0);
                 }
                 else
                 {
@@ -93,6 +93,7 @@ static void card_reader_task_handler(void *)
             {
                 uint8_t discard;
                 len = uart_read_bytes(CARD_READER_UART_NUM, &discard, 1, pdMS_TO_TICKS(1000));
+                
             }
         }
     }
