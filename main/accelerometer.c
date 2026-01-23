@@ -26,6 +26,8 @@ static const char *TAG = "accelerometer";
 static TaskHandle_t task_handle;
 
 static mpu6050_dev_t device_descriptor;
+static float acceleration_bias[3];
+static float rotation_bias[3];
 
 static float vec3_sum(float x, float y, float z) { return sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2)); }
 
@@ -177,6 +179,14 @@ esp_err_t accelerometer_init(void)
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to initialize device: %s", esp_err_to_name(esp_ret));
+        goto cleanup_device_descriptor;
+    }
+
+    ESP_LOGD(TAG, "Calibrating sensor...");
+    esp_ret = mpu6050_calibrate(&device_descriptor, acceleration_bias, rotation_bias);
+    if (esp_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to calibrate sensor: %s", esp_err_to_name(esp_ret));
         goto cleanup_device_descriptor;
     }
 

@@ -31,7 +31,6 @@ static void buzzer_task_handler(void *)
 {
     for (;;)
     {
-        
         message_t incoming_message;
         xQueueReceive(queue_buzzer_handle, &incoming_message, portMAX_DELAY);
         ESP_LOGD(TAG, "Received message with enum number: %d", incoming_message);
