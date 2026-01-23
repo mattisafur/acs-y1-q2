@@ -2,7 +2,6 @@ idf_component_register(
     SRCS "accelerometer.c"
          "buzzer.c"
          "card_reader.c"
-         "i2c_master_bus.c"
          "main.c"
          "metrics_publisher.c"
          "queue.c"

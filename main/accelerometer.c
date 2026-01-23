@@ -128,80 +128,9 @@ static void accelerometer_task_handler(void *)
     }
 }
 
-esp_err_t accelerometer_init(void)
-{
-    ESP_LOGD(TAG, "Initializing device descriptor...");
-    esp_err_t esp_ret = mpu6050_init_desc(&device, I2C_ACCELEROMETER_ADDR, I2C_NUM, PIN_I2C_SDA, PIN_I2C_SCL);
-    if (esp_ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed initializing device descriptor: %s", esp_err_to_name(esp_ret));
-        goto cleanup_device_descriptor;
-    }
-
-    unsigned int failed_tries = 0;
-    for (;;)
-    {
-        ESP_LOGD(TAG, "Probing for device...");
-        esp_ret = i2c_dev_probe(&device.i2c_dev, I2C_DEV_WRITE);
-        if (esp_ret == ESP_OK)
-        {
-            ESP_LOGD(TAG, "Device probed successfully");
-            break;
-        }
-
-        ESP_LOGW(TAG, "Failed to find device: %s", esp_err_to_name(esp_ret));
-
-        failed_tries++;
-        if (failed_tries > 5)
-        {
-            ESP_LOGE(TAG, "Failed to find device more than 5 times: %s", esp_err_to_name(esp_ret));
-            goto cleanup_device_descriptor;
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(500));
-    }
-
-    ESP_LOGD(TAG, "Initializing initializing device...");
-    esp_ret = mpu6050_init(&device);
-    if (esp_ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to initialize device: %s", esp_err_to_name(esp_ret));
-        goto cleanup_device_descriptor;
-    }
-
-    ESP_LOGD(TAG, "Initializing accelerometer freertos task...");
-    BaseType_t rtos_ret = xTaskCreate(accelerometer_task_handler, "Accelerometer", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
-    if (rtos_ret != pdPASS)
-    {
-        ESP_LOGE(TAG, "Failed to create task with error code %d", rtos_ret);
-        esp_ret = ESP_FAIL;
-        goto cleanup_device_descriptor;
-    }
-
-    return ESP_OK;
-
-cleanup_device_descriptor:
-    esp_err_t cleanup_esp_ret = mpu6050_free_desc(&device);
-    if (cleanup_esp_ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to free device descriptor: %s", esp_err_to_name(cleanup_esp_ret));
-        abort();
-    }
-
-    return esp_ret;
-}
+esp_err_t accelerometer_init(void){
+    esp_err_t esp_ret = mpu6050_init}
 
 esp_err_t accelerometer_deinit(void)
 {
-    vTaskDelete(task_handle);
-    task_handle = NULL;
-
-    esp_err_t ret = mpu6050_free_desc(&device);
-    if (ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to free device descriptor: %s", esp_err_to_name(ret));
-        return ret;
-    }
-
-    return ESP_OK;
 }
