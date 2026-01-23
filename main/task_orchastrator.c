@@ -6,16 +6,103 @@
 #include <freertos/task.h>
 
 #include "accelerometer.h"
+#include "app_config.h"
 #include "buzzer.h"
 #include "card_reader.h"
 #include "queue.h"
+#include "time_of_flight.h"
 
-static const char *TAG = "TASK ORCHASTRATOR";
+static const char *TAG = "task orchastrator";
 
 TaskHandle_t task_handle;
 
+static void task_orchastrator_handler(void *)
+{
+    for (;;)
+    {
+        orchastrator_return_message_t incoming_message;
+        BaseType_t ret = xQueueReceive(queue_task_return_handle, &incoming_message, portMAX_DELAY);
+        ESP_LOGD(TAG, "Received message with enum code: %d from component with enum code: %d", incoming_message.message, incoming_message.component);
+
+        message_t outgoing_message;
+        switch (incoming_message.message)
+        {
+        case MESSAGE_SENSOR_TRIGGERED:
+            ESP_LOGD(TAG, "Received sensor triggered message from component with enum number: %d", incoming_message.component);
+            outgoing_message = MESSAGE_BUZZER_ALARM_START;
+            ret = xQueueSendToBack(queue_buzzer_handle, &outgoing_message, portMAX_DELAY);
+            if (ret != pdTRUE)
+            {
+                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", outgoing_message, ret);
+            }
+            break;
+
+        case MESSAGE_CARD_READER_CARD_VALID:
+            ESP_LOGD(TAG, "Received card reader valid message");
+            outgoing_message = MESSAGE_BUZZER_ALARM_STOP;
+            ret = xQueueSendToBack(queue_buzzer_handle, &outgoing_message, portMAX_DELAY);
+            if (ret != pdTRUE)
+            {
+                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", outgoing_message, ret);
+            }
+            break;
+
+        case MESSAGE_CARD_READER_CARD_INVALID:
+            ESP_LOGD(TAG, "Received card reader invalid message");
+            outgoing_message = MESSAGE_BUZZER_ALARM_START;
+            ret = xQueueSendToBack(queue_buzzer_handle, &outgoing_message, portMAX_DELAY);
+            if (ret != pdTRUE)
+            {
+                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", outgoing_message, ret);
+            }
+            break;
+
+        case MESSAGE_ENABLE:
+        
+            ESP_LOGD(TAG, "Received enable message from component with enum number: %d", incoming_message.component);
+            outgoing_message = MESSAGE_ENABLE;
+
+            ret = xQueueSendToBack(queue_accelerometer_handle, &outgoing_message, 0);
+            if (ret != pdTRUE)
+            {
+                ESP_LOGE(TAG, "Failed to send message with code %d to accelerometer queue with error code %d", outgoing_message, ret);
+            }
+
+            ret = xQueueSendToBack(queue_time_of_flight_handle, &outgoing_message, 0);
+            if (ret != pdTRUE)
+            {
+                ESP_LOGE(TAG, "Failed to send message with code %d to time of flight queue with error code %d", outgoing_message, ret);
+            }
+
+            break;
+        case MESSAGE_DISABLE:
+
+            ESP_LOGD(TAG, "Received disable message from component with enum number: %d", incoming_message.component);
+            outgoing_message = MESSAGE_DISABLE;
+
+            ret = xQueueSendToBack(queue_accelerometer_handle, &outgoing_message, 0);
+            if (ret != pdTRUE)
+            {
+                ESP_LOGE(TAG, "Failed to send message with code %d to accelerometer queue with error code %d", outgoing_message, ret);
+            }
+
+            ret = xQueueSendToBack(queue_time_of_flight_handle, &outgoing_message, 0);
+            if (ret != pdTRUE)
+            {
+                ESP_LOGE(TAG, "Failed to send message with code %d to time of flight queue with error code %d", outgoing_message, ret);
+            }
+            break;
+
+        default:
+            ESP_LOGE(TAG, "Received unknown message type with enum number: %d", incoming_message.message);
+            break;
+        }
+    }
+}
+
 esp_err_t task_orchastrator_init(void)
 {
+    ESP_LOGD(TAG, "Initializing accelerometer...");
     esp_err_t esp_ret = accelerometer_init();
     if (esp_ret != ESP_OK)
     {
@@ -23,6 +110,7 @@ esp_err_t task_orchastrator_init(void)
         goto cleanup_nothing;
     }
 
+    ESP_LOGD(TAG, "Initializing buzzer...");
     esp_ret = buzzer_init();
     if (esp_ret != ESP_OK)
     {
@@ -30,25 +118,42 @@ esp_err_t task_orchastrator_init(void)
         goto cleanup_accelerometer;
     }
 
+    ESP_LOGD(TAG, "Initializing card reader");
     esp_ret = card_reader_init();
     if (esp_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to initialize card_reader: %s", esp_err_to_name(esp_ret));
+        ESP_LOGE(TAG, "Failed to initialize card reader: %s", esp_err_to_name(esp_ret));
         goto cleanup_buzzer;
     }
 
-    BaseType_t rtos_ret = xTaskCreate(task_orchastrator_handler, "Task Orchastrator", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
+    ESP_LOGD(TAG, "Initializing time of flight sensor...");
+    esp_ret = time_of_flight_init();
+    if (esp_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to initialize time of flight sensor: %s", esp_err_to_name(esp_ret));
+        goto cleanup_card_reader;
+    }
+
+    ESP_LOGD(TAG, "creating task orchastrator freertos task...");
+    BaseType_t rtos_ret = xTaskCreate(task_orchastrator_handler, "Task Orchastrator", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to create task with error code: %d", rtos_ret);
         esp_ret = ESP_FAIL;
-        goto cleanup_card_reader;
+        goto cleanup_time_of_flight;
     }
 
     return ESP_OK;
 
+cleanup_time_of_flight:
+    esp_err_t cleanup_esp_ret = time_of_flight_deinit();
+    if (cleanup_esp_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to deinitialize time_of_flight: %s. Aborting program.", esp_err_to_name(cleanup_esp_ret));
+        abort();
+    }
 cleanup_card_reader:
-    esp_err_t cleanup_esp_ret = card_reader_deinit();
+    cleanup_esp_ret = card_reader_deinit();
     if (cleanup_esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to deinitialize card_reader: %s. Aborting program.", esp_err_to_name(cleanup_esp_ret));
@@ -70,58 +175,4 @@ cleanup_accelerometer:
     }
 cleanup_nothing:
     return esp_ret;
-}
-
-static void task_orchastrator_handler(void *)
-{
-
-    task_orchastrator_init();
-    buzzer_init();
-    card_reader_init();
-
-    for (;;)
-    {
-        message_t msg;
-        BaseType_t ret = xQueueReceive(queue_task_return_handle, &msg, portMAX_DELAY);
-
-        switch (msg)
-        {
-        case MESSAGE_SENSOR_TRIGGERED:
-            ESP_LOGD(TAG, "Received sensor triggered message");
-            msg = MESSAGE_BUZZER_ALARM_START;
-            ret = xQueueSendToBack(queue_buzzer_handle, &msg, portMAX_DELAY);
-            if (ret != pdPASS)
-            {
-                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", msg, ret);
-            }
-            break;
-
-        case MESSAGE_CARD_READER_CARD_VALID:
-            ESP_LOGD(TAG, "Received card reader valid message");
-            msg = MESSAGE_BUZZER_ALARM_STOP;
-            ret = xQueueSendToBack(queue_buzzer_handle, &msg, portMAX_DELAY);
-            if (ret != pdPASS)
-            {
-                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", msg, ret);
-            }
-            break;
-
-        case MESSAGE_CARD_READER_CARD_INVALID:
-            ESP_LOGD(TAG, "Received card reader invalid message");
-            msg = MESSAGE_BUZZER_ALARM_START;
-            ret = xQueueSendToBack(queue_buzzer_handle, &msg, portMAX_DELAY);
-            if (ret != pdPASS)
-            {
-                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", msg, ret);
-            }
-            break;
-            }
-            break;
-            
-        default:
-            ESP_LOGE(TAG, "Received unknown message type");
-            break;
-        }
-        
-    }
 }

@@ -1,15 +1,20 @@
 #pragma once
 
+#include <esp_err.h>
 #include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <time.h>
 
 extern QueueHandle_t queue_task_return_handle;
 extern QueueHandle_t queue_card_reader_handle;
 extern QueueHandle_t queue_buzzer_handle;
 extern QueueHandle_t queue_accelerometer_handle;
-extern QueueHandle_t queue_metric_handle;
+extern QueueHandle_t queue_time_of_flight_handle;
+extern QueueHandle_t queue_metrics_handle;
 
-typedef enum message_t
+typedef enum
 {
     MESSAGE_ENABLE,
     MESSAGE_DISABLE,
@@ -22,20 +27,21 @@ typedef enum message_t
     MESSAGE_CARD_READER_CARD_INVALID,
 } message_t;
 
-typedef enum component_t
+typedef enum
 {
     COMPONENT_BUZZER,
     COMPONENT_CARD_READER,
     COMPONENT_ACCELEROMETER,
+    COMPONENT_TIME_OF_FLIGHT,
 } component_t;
 
-typedef struct orchastrator_return_message_t
+typedef struct
 {
     component_t component;
     message_t message;
 } orchastrator_return_message_t;
 
-typedef enum metric_type_t
+typedef enum
 {
     METRIC_TYPE_ACCELEROMETER_ACCELERATION_X,
     METRIC_TYPE_ACCELEROMETER_ACCELERATION_Y,
@@ -45,10 +51,11 @@ typedef enum metric_type_t
     METRIC_TYPE_ACCELEROMETER_ROTATION_Y,
     METRIC_TYPE_ACCELEROMETER_ROTATION_Z,
     METRIC_TYPE_ACCELEROMETER_ROTATION_TOTAL,
+    METRIC_TYPE_TIME_OF_FLIGHT_DISTANCE,
     METRIC_TYPE_CARD_READER_VALID,
 } metric_type_t;
 
-typedef struct metric_t
+typedef struct
 {
     metric_type_t metric_type;
     time_t timestamp;
@@ -60,4 +67,5 @@ typedef struct metric_t
     };
 } metric_t;
 
-void queue_init(void);
+esp_err_t queue_init(void);
+void queue_deinit(void);

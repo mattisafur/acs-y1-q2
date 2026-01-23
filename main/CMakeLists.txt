@@ -1,11 +1,21 @@
 idf_component_register(
-    SRCS "main.c"
-         "queue.c"
-         "accelerometer.c"
+    SRCS "time_sync.c" "wifi_manager.c" "accelerometer.c"
          "buzzer.c"
          "card_reader.c"
+         "main.c"
          "metrics_publisher.c"
+         "queue.c"
          "task_orchastrator.c"
-        
+         "time_of_flight.c"
+            
+    
     INCLUDE_DIRS "."
+    
+    REQUIRES esp_driver_i2c
+             vl53l1x_library
+             json
+             nvs_flash
+             esp_netif
+             esp_wifi
+             esp_driver_uart
 )

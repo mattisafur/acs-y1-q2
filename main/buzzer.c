@@ -3,23 +3,25 @@
 #include <driver/gpio.h>
 #include <esp_err.h>
 #include <esp_log.h>
+#include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include <freertos/task.h>
 
+#include "app_config.h"
 #include "queue.h"
 
 #define PIN_BUZZER GPIO_NUM_12
 
 #define ALARM_QUEUE_SIZE_ITEMS 16
 
-static const char *TAG = "BUZZER";
+static const char *TAG = "buzzer";
 
 static TaskHandle_t buzzer_task_handle;
 static TaskHandle_t alarm_task_handle;
 
 static QueueHandle_t alarm_queue_handle;
 
-typedef enum alarm_queue_message_t
+typedef enum
 {
     ALARM_QUEUE_MESSAGE_START,
     ALARM_QUEUE_MESSAGE_STOP,
@@ -29,31 +31,39 @@ static void buzzer_task_handler(void *)
 {
     for (;;)
     {
-        message_t msg;
-        const BaseType_t ret = xQueueReceive(queue_buzzer_handle, &msg, portMAX_DELAY);
+        
+        message_t incoming_message;
+        xQueueReceive(queue_buzzer_handle, &incoming_message, portMAX_DELAY);
+        ESP_LOGD(TAG, "Received message with enum number: %d", incoming_message);
 
-        switch (msg)
+        alarm_queue_message_t outgoing_message;
+        switch (incoming_message)
         {
         case MESSAGE_BUZZER_ALARM_START:
-            xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_START, portMAX_DELAY);
+            outgoing_message = ALARM_QUEUE_MESSAGE_START;
+            xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
             break;
 
         case MESSAGE_BUZZER_ALARM_STOP:
-            xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_STOP, portMAX_DELAY);
+            outgoing_message = ALARM_QUEUE_MESSAGE_STOP;
+            xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
             break;
 
         case MESSAGE_BUZZER_CARD_VALID:
-            xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_STOP, portMAX_DELAY);
+            outgoing_message = ALARM_QUEUE_MESSAGE_STOP;
+            xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
 
             gpio_set_level(PIN_BUZZER, 1);
             vTaskDelay(pdMS_TO_TICKS(150));
             gpio_set_level(PIN_BUZZER, 0);
 
-            xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_START, portMAX_DELAY);
+            outgoing_message = ALARM_QUEUE_MESSAGE_START;
+            xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
             break;
 
         case MESSAGE_BUZZER_CARD_INVALID:
-            xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_STOP, portMAX_DELAY);
+            outgoing_message = ALARM_QUEUE_MESSAGE_STOP;
+            xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
 
             gpio_set_level(PIN_BUZZER, 1);
             vTaskDelay(pdMS_TO_TICKS(50));
@@ -68,11 +78,12 @@ static void buzzer_task_handler(void *)
             gpio_set_level(PIN_BUZZER, 0);
             vTaskDelay(pdMS_TO_TICKS(50));
 
-            xQueueSendToBack(alarm_queue_handle, ALARM_QUEUE_MESSAGE_START, portMAX_DELAY);
+            outgoing_message = ALARM_QUEUE_MESSAGE_START;
+            xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
             break;
 
         default:
-            ESP_LOGE(TAG, "Received invalid message from queue, message num: %d", msg);
+            ESP_LOGE(TAG, "Received invalid message from queue, message num: %d", outgoing_message);
             break;
         }
     }
@@ -80,30 +91,37 @@ static void buzzer_task_handler(void *)
 
 static void alarm_task_handler(void *)
 {
+    alarm_queue_message_t msg;
     for (;;)
     {
-        alarm_queue_message_t msg;
-        const BaseType_t ret = xQueueReceive(queue_buzzer_handle, &msg, 0);
 
-        if (ret != errQUEUE_EMPTY)
+        const BaseType_t ret = xQueueReceive(alarm_queue_handle, &msg, 0);
+
+        switch (msg)
         {
-            switch (msg)
+        case ALARM_QUEUE_MESSAGE_START:
+            gpio_set_level(PIN_BUZZER, 1);
+            vTaskDelay(pdMS_TO_TICKS(50));
+            gpio_set_level(PIN_BUZZER, 0);
+            vTaskDelay(pdMS_TO_TICKS(100));
+            break;
+
+        case ALARM_QUEUE_MESSAGE_STOP:
+            if (ret == pdTRUE)
             {
-            case ALARM_QUEUE_MESSAGE_START:
-                gpio_set_level(PIN_BUZZER, 1);
-                vTaskDelay(pdMS_TO_TICKS(50));
                 gpio_set_level(PIN_BUZZER, 0);
-                vTaskDelay(pdMS_TO_TICKS(100));
-                break;
-
-            case ALARM_QUEUE_MESSAGE_STOP:
-                vTaskDelay(pdMS_TO_TICKS(10));
-                break;
-
-            default:
-                ESP_LOGE(TAG, "Received invalid message from queue, message num: %d", msg);
-                break;
+                vTaskDelay(pdMS_TO_TICKS(50));
+                ESP_LOGI(TAG, "Alarm stopped");
             }
+
+            break;
+
+        default:
+            if (ret == pdTRUE)
+            {
+                ESP_LOGE(TAG, "Received invalid message from queue, message num: %d", msg);
+            }
+            break;
         }
     }
 }
@@ -131,7 +149,7 @@ esp_err_t buzzer_init(void)
         goto cleanup_gpio;
     }
 
-    BaseType_t rtos_ret = xTaskCreate(buzzer_task_handler, "Buzzer", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &buzzer_task_handle);
+    BaseType_t rtos_ret = xTaskCreate(buzzer_task_handler, "Buzzer", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &buzzer_task_handle);
     if (rtos_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to create buzzer task with error code: %d", rtos_ret);
@@ -139,7 +157,7 @@ esp_err_t buzzer_init(void)
         goto cleanup_gpio;
     }
 
-    rtos_ret = xTaskCreate(alarm_task_handler, "Buzzer Alarm", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &alarm_task_handle);
+    rtos_ret = xTaskCreate(alarm_task_handler, "Buzzer Alarm", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &alarm_task_handle);
     if (rtos_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to create alarm task with error code: %d", rtos_ret);
@@ -157,8 +175,10 @@ esp_err_t buzzer_init(void)
 
 cleanup_alarm_task:
     vTaskDelete(alarm_task_handle);
+    alarm_task_handle = NULL;
 cleanup_buzzer_task:
     vTaskDelete(buzzer_task_handle);
+    buzzer_task_handle = NULL;
 cleanup_gpio:
     esp_err_t cleanup_esp_ret = gpio_reset_pin(PIN_BUZZER);
     if (cleanup_esp_ret != ESP_OK)
@@ -173,8 +193,10 @@ cleanup_gpio:
 esp_err_t buzzer_deinit(void)
 {
     vTaskDelete(alarm_task_handle);
+    alarm_task_handle = NULL;
 
     vTaskDelete(buzzer_task_handle);
+    buzzer_task_handle = NULL;
 
     esp_err_t ret = gpio_reset_pin(PIN_BUZZER);
     if (ret != ESP_OK)
