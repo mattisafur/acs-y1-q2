@@ -31,7 +31,7 @@ static void task_orchastrator_handler(void *)
             ESP_LOGD(TAG, "Received sensor triggered message from component with enum number: %d", incoming_message.component);
             outgoing_message = MESSAGE_BUZZER_ALARM_START;
             ret = xQueueSendToBack(queue_buzzer_handle, &outgoing_message, portMAX_DELAY);
-            if (ret != pdPASS)
+            if (ret != pdTRUE)
             {
                 ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", outgoing_message, ret);
             }
@@ -41,7 +41,7 @@ static void task_orchastrator_handler(void *)
             ESP_LOGD(TAG, "Received card reader valid message");
             outgoing_message = MESSAGE_BUZZER_ALARM_STOP;
             ret = xQueueSendToBack(queue_buzzer_handle, &outgoing_message, portMAX_DELAY);
-            if (ret != pdPASS)
+            if (ret != pdTRUE)
             {
                 ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", outgoing_message, ret);
             }
@@ -51,9 +51,45 @@ static void task_orchastrator_handler(void *)
             ESP_LOGD(TAG, "Received card reader invalid message");
             outgoing_message = MESSAGE_BUZZER_ALARM_START;
             ret = xQueueSendToBack(queue_buzzer_handle, &outgoing_message, portMAX_DELAY);
-            if (ret != pdPASS)
+            if (ret != pdTRUE)
             {
                 ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", outgoing_message, ret);
+            }
+            break;
+
+        case MESSAGE_ENABLE:
+        
+            ESP_LOGD(TAG, "Received enable message from component with enum number: %d", incoming_message.component);
+            outgoing_message = MESSAGE_ENABLE;
+
+            ret = xQueueSendToBack(queue_accelerometer_handle, &outgoing_message, 0);
+            if (ret != pdTRUE)
+            {
+                ESP_LOGE(TAG, "Failed to send message with code %d to accelerometer queue with error code %d", outgoing_message, ret);
+            }
+
+            ret = xQueueSendToBack(queue_time_of_flight_handle, &outgoing_message, 0);
+            if (ret != pdTRUE)
+            {
+                ESP_LOGE(TAG, "Failed to send message with code %d to time of flight queue with error code %d", outgoing_message, ret);
+            }
+
+            break;
+        case MESSAGE_DISABLE:
+
+            ESP_LOGD(TAG, "Received disable message from component with enum number: %d", incoming_message.component);
+            outgoing_message = MESSAGE_DISABLE;
+
+            ret = xQueueSendToBack(queue_accelerometer_handle, &outgoing_message, 0);
+            if (ret != pdTRUE)
+            {
+                ESP_LOGE(TAG, "Failed to send message with code %d to accelerometer queue with error code %d", outgoing_message, ret);
+            }
+
+            ret = xQueueSendToBack(queue_time_of_flight_handle, &outgoing_message, 0);
+            if (ret != pdTRUE)
+            {
+                ESP_LOGE(TAG, "Failed to send message with code %d to time of flight queue with error code %d", outgoing_message, ret);
             }
             break;
 

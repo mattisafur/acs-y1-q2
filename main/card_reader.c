@@ -28,6 +28,7 @@ static void card_reader_task_handler(void *)
 {
 
     bool valid = false;
+    bool enabled = true;
     for (;;)
     {
         
@@ -48,15 +49,23 @@ static void card_reader_task_handler(void *)
                 {
                     ESP_LOGI(TAG, "Valid RFID tag detected: %s", id);
                     valid = true;
+                    enabled =!enabled;
 
                     orchastrator_return_message_t tx_msg = {
                         .component = COMPONENT_CARD_READER,
                         .message = valid ? MESSAGE_CARD_READER_CARD_VALID : MESSAGE_CARD_READER_CARD_INVALID,
                     };
                     BaseType_t q_ret = xQueueSendToBack(queue_task_return_handle, &tx_msg, 0);
-                    if (q_ret != pdPASS)
+                    if (q_ret != pdTRUE)
                     {
                         ESP_LOGE(TAG, "Failed to send card read result to queue with error code: %d", q_ret);
+                    }
+
+                    tx_msg .message = enabled ? MESSAGE_ENABLE : MESSAGE_DISABLE;
+                    q_ret = xQueueSendToBack(queue_task_return_handle, &tx_msg, 0);
+                    if (q_ret != pdTRUE)
+                    {
+                        ESP_LOGE(TAG, "Failed to send accelerometer enable/disable message to queue with error code: %d", q_ret);
                     }
 
                     metric_t metric_card_reader_valid = {
