@@ -9,8 +9,11 @@
 #include "app_config.h"
 #include "buzzer.h"
 #include "card_reader.h"
+#include "metrics_publisher.h"
 #include "queue.h"
 #include "time_of_flight.h"
+#include "time_sync.h"
+#include "app_wifi.h"
 
 static const char *TAG = "task orchastrator";
 
@@ -122,8 +125,22 @@ static void task_orchastrator_handler(void *)
 
 esp_err_t task_orchastrator_init(void)
 {
+    esp_err_t esp_ret = app_wifi_init();
+    if (esp_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to initialize wifi: %s", esp_err_to_name(esp_ret));
+        // TODO add cleanup
+    }
+
+    esp_ret = time_sync_init();
+    if (esp_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to synchronize time: %s", esp_err_to_name(esp_ret));
+        // TODO add cleanup
+    }
+
     ESP_LOGD(TAG, "Initializing accelerometer...");
-    esp_err_t esp_ret = accelerometer_init();
+    esp_ret = accelerometer_init();
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to initialize accelerometer: %s", esp_err_to_name(esp_ret));
@@ -152,6 +169,13 @@ esp_err_t task_orchastrator_init(void)
     {
         ESP_LOGE(TAG, "Failed to initialize time of flight sensor: %s", esp_err_to_name(esp_ret));
         goto cleanup_card_reader;
+    }
+
+    esp_ret = metrics_publisher_init();
+    if (esp_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to initialize metrics publisher: %s", esp_err_to_name(esp_ret));
+        // TODO add cleanup
     }
 
     ESP_LOGD(TAG, "creating task orchastrator freertos task...");
