@@ -19,7 +19,7 @@
 #define PIN_CARD_READER_ENABLE GPIO_NUM_33
 #define RFID_TAG_ID "01004B1DA2"
 
-static const char *TAG = "CARD READER";
+static const char *TAG = "card reader";
 
 static TaskHandle_t task_handle;
 

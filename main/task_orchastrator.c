@@ -8,11 +8,10 @@
 #include "accelerometer.h"
 #include "buzzer.h"
 #include "card_reader.h"
-#include "i2c_master_bus.h"
 #include "queue.h"
 #include "time_of_flight.h"
 
-static const char *TAG = "TASK ORCHASTRATOR";
+static const char *TAG = "task orchastrator";
 
 TaskHandle_t task_handle;
 
@@ -64,20 +63,15 @@ static void task_orchastrator_handler(void *)
 
 esp_err_t task_orchastrator_init(void)
 {
-    esp_err_t esp_ret = i2c_master_bus_init();
-    if (esp_ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to initialize I2C master bus:  %s", esp_ret);
-        goto cleanup_nothing;
-    }
-
-    esp_ret = accelerometer_init();
+    ESP_LOGD(TAG, "Initializing accelerometer...");
+    esp_err_t esp_ret = accelerometer_init();
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to initialize accelerometer: %s", esp_err_to_name(esp_ret));
-        goto cleanup_i2c_master_bus;
+        goto cleanup_nothing;
     }
 
+    ESP_LOGD(TAG, "Initializing buzzer...");
     esp_ret = buzzer_init();
     if (esp_ret != ESP_OK)
     {
@@ -85,20 +79,23 @@ esp_err_t task_orchastrator_init(void)
         goto cleanup_accelerometer;
     }
 
+    ESP_LOGD(TAG, "Initializing card reader");
     esp_ret = card_reader_init();
     if (esp_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to initialize card_reader: %s", esp_err_to_name(esp_ret));
+        ESP_LOGE(TAG, "Failed to initialize card reader: %s", esp_err_to_name(esp_ret));
         goto cleanup_buzzer;
     }
 
+    ESP_LOGD(TAG, "Initializing time of flight sensor...");
     esp_ret = time_of_flight_init();
     if (esp_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to initialize time_of_flight: %s", esp_err_to_name(esp_ret));
+        ESP_LOGE(TAG, "Failed to initialize time of flight sensor: %s", esp_err_to_name(esp_ret));
         goto cleanup_card_reader;
     }
 
+    ESP_LOGD(TAG, "creating task orchastrator freertos task...");
     BaseType_t rtos_ret = xTaskCreate(task_orchastrator_handler, "Task Orchastrator", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {
@@ -135,13 +132,6 @@ cleanup_accelerometer:
     if (cleanup_esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to deinitialize accelerometer: %s. Aborting program.", esp_err_to_name(cleanup_esp_ret));
-        abort();
-    }
-cleanup_i2c_master_bus:
-    cleanup_esp_ret = i2c_master_bus_deinit();
-    if (cleanup_esp_ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to deinitialize i2c master bus: %s. aborting program.", esp_err_to_name(cleanup_esp_ret));
         abort();
     }
 cleanup_nothing:

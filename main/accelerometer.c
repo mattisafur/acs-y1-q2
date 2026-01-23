@@ -1,6 +1,7 @@
 #include "accelerometer.h"
 
 #include <driver/gpio.h>
+#include <esp_err.h>
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -9,16 +10,16 @@
 
 #include "queue.h"
 
-#define PIN_I2C_SDA GPIO_NUM_21
-#define PIN_I2C_SCL GPIO_NUM_22
+#define ACCELEROMETER_I2C_PORT_NUM I2C_NUM_1
+#define ACCELEROMETER_I2C_GPIO_SDA GPIO_NUM_26
+#define ACCELEROMETER_I2C_GPIO_SCL GPIO_NUM_27
 
-#define I2C_NUM I2C_NUM_0
-#define I2C_ACCELEROMETER_ADDR 0x68
+#define ACCELEROMETER_I2C_ADDR 0x68
 
-#define ACCELERATION_THREASHOLD 150
-#define ROTATION_THREASHOLD 150
+#define ACCELERATION_THREASHOLD_ACCELERATION 150
+#define ACCELERATION_THREASHOLD_ROTATION 150
 
-static const char *TAG = "ACCELEROMETER";
+static const char *TAG = "accelerometer";
 
 static TaskHandle_t task_handle;
 
@@ -67,7 +68,7 @@ static void accelerometer_task_handler(void *)
             const float acceleration_sum = vec3_sum(acceleration.x, acceleration.y, acceleration.z);
             const float rotation_sum = vec3_sum(rotation.x, rotation.y, rotation.z);
 
-            if (acceleration_sum > ACCELERATION_THREASHOLD || rotation_sum > ROTATION_THREASHOLD)
+            if (acceleration_sum > ACCELERATION_THREASHOLD_ACCELERATION || rotation_sum > ACCELERATION_THREASHOLD_ROTATION)
             {
                 const orchastrator_return_message_t alarm_message = {
                     .component = COMPONENT_ACCELEROMETER,
@@ -130,19 +131,22 @@ static void accelerometer_task_handler(void *)
 
 esp_err_t accelerometer_init(void)
 {
-    esp_err_t esp_ret = mpu6050_init_desc(&device, I2C_ACCELEROMETER_ADDR, I2C_NUM, PIN_I2C_SDA, PIN_I2C_SCL);
+    ESP_LOGD(TAG, "Initializing device descriptor...");
+    esp_err_t esp_ret = mpu6050_init_desc(&device, ACCELEROMETER_I2C_ADDR, ACCELEROMETER_I2C_PORT_NUM, ACCELEROMETER_I2C_GPIO_SDA, ACCELEROMETER_I2C_GPIO_SCL);
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed initializing device descriptor: %s", esp_err_to_name(esp_ret));
         goto cleanup_device_descriptor;
     }
 
-    unsigned int failed_tries = 0;
+    unsigned int failed_tries = 0;`
     for (;;)
     {
+        ESP_LOGD(TAG, "Probing for device...");
         esp_ret = i2c_dev_probe(&device.i2c_dev, I2C_DEV_WRITE);
         if (esp_ret == ESP_OK)
         {
+            ESP_LOGD(TAG, "Device probed successfully");
             break;
         }
 
@@ -158,6 +162,7 @@ esp_err_t accelerometer_init(void)
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 
+    ESP_LOGD(TAG, "Initializing initializing device...");
     esp_ret = mpu6050_init(&device);
     if (esp_ret != ESP_OK)
     {
@@ -165,6 +170,7 @@ esp_err_t accelerometer_init(void)
         goto cleanup_device_descriptor;
     }
 
+    ESP_LOGD(TAG, "Initializing accelerometer freertos task...");
     BaseType_t rtos_ret = xTaskCreate(accelerometer_task_handler, "Accelerometer", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {

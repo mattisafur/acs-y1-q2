@@ -6,17 +6,20 @@
 #include <esp_log.h>
 #include <vl53l1x.h>
 
-#include "i2c_master_bus.h"
 #include "queue.h"
 
-static const char *TAG = "TIME OF FLIGHT";
+static const char *TAG = "time of flight";
 
+#define TIME_OF_FLIGHT_I2C_PORT_NUM I2C_NUM_0
+#define TIME_OF_FLIGHT_I2C_GPIO_SDA GPIO_NUM_21
+#define TIME_OF_FLIGHT_I2C_GPIO_SCL GPIO_NUM_22
 #define TIME_OF_FLIGHT_I2C_ADDR 0x29
 #define TIME_OF_FLIGHT_MACRO_TIMING 16
 #define TIME_OF_FLIGHT_INTERMEASUREMENT_MS 100
 
 static TaskHandle_t task_handle;
 
+i2c_master_bus_handle_t i2c_master_bus_handle;
 static vl53l1x_t device_descriptor;
 
 static void time_of_flight_handler(void *)
@@ -83,7 +86,23 @@ static void time_of_flight_handler(void *)
 
 esp_err_t time_of_flight_init(void)
 {
+    ESP_LOGD(TAG, "Creating new I2C master bus...");
+    i2c_master_bus_config_t i2c_master_bus_config = {
+        .i2c_port = TIME_OF_FLIGHT_I2C_PORT_NUM,
+        .sda_io_num = TIME_OF_FLIGHT_I2C_GPIO_SDA,
+        .scl_io_num = TIME_OF_FLIGHT_I2C_GPIO_SCL,
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .glitch_ignore_cnt = 7,
+        .flags.enable_internal_pullup = true,
+    };
+    esp_err_t ret = i2c_new_master_bus(&i2c_master_bus_config, &i2c_master_bus_handle);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to create new I2C master bus: %s", esp_err_to_name(ret));
+        return ret;
+    }
 
+    ESP_LOGD(TAG, "Initializing device descriptor...");
     esp_err_t esp_ret = vl53l1x_init(&device_descriptor, i2c_master_bus_handle, TIME_OF_FLIGHT_I2C_ADDR);
     if (esp_ret != ESP_OK)
     {
@@ -91,6 +110,7 @@ esp_err_t time_of_flight_init(void)
         goto cleanup_none;
     }
 
+    ESP_LOGD(TAG, "Initializing sensor...");
     esp_ret = vl53l1x_sensor_init(&device_descriptor);
     if (esp_ret != ESP_OK)
     {
@@ -98,13 +118,15 @@ esp_err_t time_of_flight_init(void)
         goto cleanup_device_descriptor;
     }
 
+    ESP_LOGD(TAG, "Configuring sensor for long range...");
     esp_ret = vl53l1x_config_long_100ms(&device_descriptor);
     if (esp_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to configure sendor for long range: %s", esp_err_to_name(esp_ret));
+        ESP_LOGE(TAG, "Failed to configure sensor for long range: %s", esp_err_to_name(esp_ret));
         goto cleanup_device_descriptor;
     }
 
+    ESP_LOGD(TAG, "Starting sensor...");
     esp_ret = vl53l1x_start(&device_descriptor);
     if (esp_ret != ESP_OK)
     {
@@ -112,6 +134,7 @@ esp_err_t time_of_flight_init(void)
         goto cleanup_device_descriptor;
     }
 
+    ESP_LOGD(TAG, "Setting macro timing...");
     esp_ret = vl53l1x_set_macro_timing(&device_descriptor, TIME_OF_FLIGHT_MACRO_TIMING);
     if (esp_ret != ESP_OK)
     {
@@ -119,6 +142,7 @@ esp_err_t time_of_flight_init(void)
         goto cleanup_start;
     }
 
+    ESP_LOGD(TAG, "setting intermeasurement period...");
     esp_ret = vl53l1x_set_intermeasurement_ms(&device_descriptor, TIME_OF_FLIGHT_INTERMEASUREMENT_MS);
     if (esp_ret != ESP_OK)
     {
@@ -126,6 +150,7 @@ esp_err_t time_of_flight_init(void)
         goto cleanup_start;
     }
 
+    ESP_LOGD(TAG, "starting sensor");
     esp_ret = vl53l1x_start(&device_descriptor);
     if (esp_ret != ESP_OK)
     {
@@ -133,6 +158,7 @@ esp_err_t time_of_flight_init(void)
         goto cleanup_start;
     }
 
+    ESP_LOGD(TAG, "creating freertos task...");
     BaseType_t rtos_ret = xTaskCreate(time_of_flight_handler, "Time of Flight", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {
@@ -144,6 +170,7 @@ esp_err_t time_of_flight_init(void)
     return ESP_OK;
 
 cleanup_start:
+    ESP_LOGD(TAG, "cleanup: stopping sensor...");
     esp_err_t cleanup_ret = vl53l1x_stop(&device_descriptor);
     if (cleanup_ret != ESP_OK)
     {
@@ -151,6 +178,7 @@ cleanup_start:
         abort();
     }
 cleanup_device_descriptor:
+    ESP_LOGD(TAG, "cleanup: deinitializing device...");
     cleanup_ret = vl53l1x_deinit(&device_descriptor);
     if (cleanup_ret != ESP_OK)
     {

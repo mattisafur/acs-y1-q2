@@ -2,7 +2,6 @@ idf_component_register(
     SRCS "time_sync.c" "wifi_manager.c" "accelerometer.c"
          "buzzer.c"
          "card_reader.c"
-         "i2c_master_bus.c"
          "main.c"
          "metrics_publisher.c"
          "queue.c"

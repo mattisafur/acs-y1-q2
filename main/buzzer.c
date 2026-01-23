@@ -13,7 +13,7 @@
 
 #define ALARM_QUEUE_SIZE_ITEMS 16
 
-static const char *TAG = "BUZZER";
+static const char *TAG = "buzzer";
 
 static TaskHandle_t buzzer_task_handle;
 static TaskHandle_t alarm_task_handle;

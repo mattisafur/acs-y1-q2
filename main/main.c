@@ -3,7 +3,7 @@
 #include "queue.h"
 #include "task_orchastrator.h"
 
-static const char *TAG = "MAIN";
+static const char *TAG = "main";
 
 void app_main(void)
 {
