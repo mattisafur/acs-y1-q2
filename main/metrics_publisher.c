@@ -6,6 +6,7 @@
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
+#include <esp_event.h>
 
 #include "queue.h"
 
@@ -94,45 +95,6 @@ static void metrics_publisher_handler(void *)
         xQueueReceive(queue_metrics_handle, &msg, portMAX_DELAY);
 
         cJSON *json_metric = metric_to_cjson(&msg);
-    }
-}
-
-static void wifi_event_handler(void *, esp_event_base_t event_base, int32_t event_id, void *event_data)
-{
-    static unsigned int wifi_reconnect_count = 0;
-    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
-    {
-        esp_err_t ret = esp_wifi_connect();
-        if (ret != ESP_OK)
-        {
-            ESP_LOGE(TAG, "Failed to connect to wifi: %s. aborting program", esp_err_to_name(ret));
-            abort();
-        }
-    }
-    else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
-    {
-        if (wifi_reconnect_count < WIFI_RECONNECT_MAX_RETRY)
-        {
-            ESP_LOGW(TAG, "Disconnected from wifi, trying to reconnect...");
-
-            esp_err_t ret = esp_wifi_connect();
-            if (ret != ESP_OK)
-            {
-                ESP_LOGE(TAG, "Failed to connect to wifi: %s. aborting program", esp_err_to_name(ret));
-                abort();
-            }
-            wifi_reconnect_count++;
-        }
-        else
-        {
-            xEventGroupSetBits(wifi_event_group, WIFI_FAIL_BIT);
-        }
-    }
-    else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
-    {
-        ip_event_got_ip_t *got_ip_event = event_data;
-        wifi_reconnect_count = 0;
-        xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
     }
 }
 

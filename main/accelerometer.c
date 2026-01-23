@@ -139,7 +139,7 @@ esp_err_t accelerometer_init(void)
         goto cleanup_device_descriptor;
     }
 
-    unsigned int failed_tries = 0;`
+    unsigned int failed_tries = 0;
     for (;;)
     {
         ESP_LOGD(TAG, "Probing for device...");
