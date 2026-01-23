@@ -8,9 +8,9 @@
 
 #include "queue.h"
 
-static const char *TAG = "TIME OF FLIGHT";
+static const char *TAG = "time of flight";
 
-#define TIME_OF_FLIGHT_I2C_PORT_NUM 0
+#define TIME_OF_FLIGHT_I2C_PORT_NUM I2C_NUM_0
 #define TIME_OF_FLIGHT_I2C_GPIO_SDA GPIO_NUM_21
 #define TIME_OF_FLIGHT_I2C_GPIO_SCL GPIO_NUM_22
 #define TIME_OF_FLIGHT_I2C_ADDR 0x29

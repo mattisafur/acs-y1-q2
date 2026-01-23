@@ -6,7 +6,7 @@
 
 #define QUEUE_SIZE_ITEMS 16
 
-static const char *TAG = "QUEUE";
+static const char *TAG = "queue";
 
 QueueHandle_t queue_task_return_handle;
 QueueHandle_t queue_card_reader_handle;

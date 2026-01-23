@@ -11,7 +11,7 @@
 
 #include "queue.h"
 
-static const char *TAG = "METRICS PUBLISHER";
+static const char *TAG = "metrics publisher";
 
 #define WIFI_SSID "AAA"
 #define WIFI_PASSWORD "AAA"
