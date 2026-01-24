@@ -199,7 +199,7 @@ cleanup_wifi_start:
     }
 cleanup_ip_event_handler:
     ESP_LOGI(TAG, "Unregistering ip event handler...");
-    cleanup_ret = esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event_handler_instance);
+    cleanup_ret = esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, ip_event_handler_instance);
     if (cleanup_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to unregister ip event handler: %s. aborting program.", esp_err_to_name(cleanup_ret));
