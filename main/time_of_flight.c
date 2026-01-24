@@ -34,21 +34,21 @@ static void time_of_flight_handler(void *)
     bool tof_enabled = true;
     for (;;)
     {
-        message_t msg;
-        BaseType_t esp_ret = xQueueReceive(queue_time_of_flight_handle, &msg, 0);
+        message_t message;
+        BaseType_t esp_ret = xQueueReceive(queue_handle_time_of_flight, &message, 0);
         if (esp_ret == pdTRUE)
         {
-            switch (msg)
+            switch (message.type)
             {
-            case MESSAGE_ENABLE:
+            case MESSAGE_TYPE_ENABLE:
                 tof_enabled = true;
                 break;
-            case MESSAGE_DISABLE:
+            case MESSAGE_TYPE_DISABLE:
                 tof_enabled = false;
                 break;
 
             default:
-                ESP_LOGE(TAG, "Received invalid message from queue, message num: %d", msg);
+                ESP_LOGE(TAG, "Received invalid message from queue, message num: %d", message);
                 break;
             }
         }
@@ -66,11 +66,11 @@ static void time_of_flight_handler(void *)
 
                 if (read.distance_mm > TIME_OF_FLIGHT_DISTANCE_THREASHOLD_MM)
                 {
-                    const orchastrator_return_message_t tof_message = {
+                    const message_t tof_message = {
                         .component = COMPONENT_TIME_OF_FLIGHT,
-                        .message = MESSAGE_SENSOR_TRIGGERED,
+                        .type = MESSAGE_TYPE_SENSOR_TRIGGERED,
                     };
-                    xQueueSendToBack(queue_task_return_handle, &tof_message, portMAX_DELAY);
+                    xQueueSendToBack(queue_handle_task_orchastrator, &tof_message, portMAX_DELAY);
 
                     const metric_t metric_tof_distance = {
                         .metric_type = METRIC_TYPE_TIME_OF_FLIGHT_DISTANCE,
@@ -78,7 +78,7 @@ static void time_of_flight_handler(void *)
                         .float_value = read.distance_mm,
                     };
 
-                    xQueueSendToBack(queue_metrics_handle, &metric_tof_distance, 0);
+                    xQueueSendToBack(queue_handle_metrics, &metric_tof_distance, 0);
                 }
             }
         }

@@ -7,13 +7,13 @@
 
 #include "accelerometer.h"
 #include "app_config.h"
+#include "app_wifi.h"
 #include "buzzer.h"
 #include "card_reader.h"
 #include "metrics_publisher.h"
 #include "queue.h"
 #include "time_of_flight.h"
 #include "time_sync.h"
-#include "app_wifi.h"
 
 static const char *TAG = "task orchastrator";
 
@@ -26,53 +26,54 @@ static void task_orchastrator_handler(void *)
 {
     for (;;)
     {
-        orchastrator_return_message_t incoming_message;
-        BaseType_t ret = xQueueReceive(queue_task_return_handle, &incoming_message, portMAX_DELAY);
-        ESP_LOGD(TAG, "Received message with enum code: %d from component with enum code: %d", incoming_message.message, incoming_message.component);
+        message_t incoming_message;
+        BaseType_t ret = xQueueReceive(queue_handle_task_orchastrator, &incoming_message, portMAX_DELAY);
+        ESP_LOGD(TAG, "Received message \"%s\" from component \"%s\"", queue_message_type_to_name(incoming_message.type), queue_component_to_name(incoming_message.component));
 
-        message_t outgoing_message;
-        switch (incoming_message.message)
+        message_t outgoing_message = {
+            .component = COMPONENT_TASK_ORCHASTRATOR,
+        };
+        switch (incoming_message.type)
         {
-        case MESSAGE_SENSOR_TRIGGERED:
-            ESP_LOGD(TAG, "Received sensor triggered message from component with enum number: %d", incoming_message.component);
-            outgoing_message = MESSAGE_BUZZER_ALARM_START;
-            ret = xQueueSendToBack(queue_buzzer_handle, &outgoing_message, portMAX_DELAY);
+        case MESSAGE_TYPE_SENSOR_TRIGGERED:
+            outgoing_message.type = MESSAGE_TYPE_BUZZER_ALARM_START;
+            ret = xQueueSendToBack(queue_handle_buzzer, &outgoing_message, portMAX_DELAY);
             if (ret != pdTRUE)
             {
-                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", outgoing_message, ret);
+                ESP_LOGE(TAG, "Failed to send message \"%s\" to buzzer queue with error code %d", queue_message_type_to_name(outgoing_message.type), ret);
             }
             system_trigerred = true;
             break;
 
-        case MESSAGE_CARD_READER_CARD_VALID:
-            outgoing_message = MESSAGE_BUZZER_CARD_VALID;
-            ret = xQueueSendToBack(queue_buzzer_handle, &outgoing_message, portMAX_DELAY);
-            if (ret != ESP_OK)
+        case MESSAGE_TYPE_CARD_READER_CARD_VALID:
+            outgoing_message.type = MESSAGE_TYPE_BUZZER_CARD_VALID;
+            ret = xQueueSendToBack(queue_handle_buzzer, &outgoing_message, portMAX_DELAY);
+            if (ret != pdTRUE)
             {
-                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", outgoing_message, ret);
+                ESP_LOGE(TAG, "Failed to send message \"%s\" to buzzer queue with error code %d", queue_message_type_to_name(outgoing_message.type), ret);
             }
 
             if (system_trigerred)
             {
                 // stop alarm
-                outgoing_message = MESSAGE_BUZZER_ALARM_STOP;
-                ret = xQueueSendToBack(queue_buzzer_handle, &outgoing_message, portMAX_DELAY);
-                if (ret != ESP_OK)
+                outgoing_message.type = MESSAGE_TYPE_BUZZER_ALARM_STOP;
+                ret = xQueueSendToBack(queue_handle_buzzer, &outgoing_message, portMAX_DELAY);
+                if (ret != pdTRUE)
                 {
-                    ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", outgoing_message, ret);
+                    ESP_LOGE(TAG, "Failed to send message \"%s\" to buzzer queue with error code %d", queue_message_type_to_name(outgoing_message.type), ret);
                 }
 
                 // disable sensors
-                outgoing_message = MESSAGE_DISABLE;
-                ret = xQueueSendToBack(queue_accelerometer_handle, &outgoing_message, portMAX_DELAY);
-                if (ret != ESP_OK)
+                outgoing_message.type = MESSAGE_TYPE_DISABLE;
+                ret = xQueueSendToBack(queue_handle_accelerometer, &outgoing_message, portMAX_DELAY);
+                if (ret != pdTRUE)
                 {
-                    ESP_LOGE(TAG, "Failed to send message with code %d to accelerometer queue with error code %d", outgoing_message, ret);
+                    ESP_LOGE(TAG, "Failed to send message \"%s\" to accelerometer queue with error code %d", queue_message_type_to_name(outgoing_message.type), ret);
                 }
-                ret = xQueueSendToBack(queue_time_of_flight_handle, &outgoing_message, portMAX_DELAY);
-                if (ret != ESP_OK)
+                ret = xQueueSendToBack(queue_handle_time_of_flight, &outgoing_message, portMAX_DELAY);
+                if (ret != pdTRUE)
                 {
-                    ESP_LOGE(TAG, "Failed to send message with code %d to time of flight sensor queue with error code %d", outgoing_message, ret);
+                    ESP_LOGE(TAG, "Failed to send message \"%s\" to time of flight sensor queue with error code %d", queue_message_type_to_name(outgoing_message.type), ret);
                 }
 
                 system_armed = false;
@@ -82,42 +83,42 @@ static void task_orchastrator_handler(void *)
             {
                 // toggle system arm state
                 system_armed = !system_armed;
-                outgoing_message = system_armed ? MESSAGE_ENABLE : MESSAGE_DISABLE;
-                ret = xQueueSendToBack(queue_accelerometer_handle, &outgoing_message, portMAX_DELAY);
-                if (ret != ESP_OK)
+                outgoing_message.type = system_armed ? MESSAGE_TYPE_ENABLE : MESSAGE_TYPE_DISABLE;
+                ret = xQueueSendToBack(queue_handle_accelerometer, &outgoing_message, portMAX_DELAY);
+                if (ret != pdTRUE)
                 {
-                    ESP_LOGE(TAG, "Failed to send message with code %d to accelerometer queue with error code %d", outgoing_message, ret);
+                    ESP_LOGE(TAG, "Failed to send message \"%s\" to accelerometer queue with error code %d", queue_message_type_to_name(outgoing_message.type), ret);
                 }
-                ret = xQueueSendToBack(queue_time_of_flight_handle, &outgoing_message, portMAX_DELAY);
-                if (ret != ESP_OK)
+                ret = xQueueSendToBack(queue_handle_time_of_flight, &outgoing_message, portMAX_DELAY);
+                if (ret != pdTRUE)
                 {
-                    ESP_LOGE(TAG, "Failed to send message with code %d to time of flight sensor queue with error code %d", outgoing_message, ret);
+                    ESP_LOGE(TAG, "Failed to send message \"%s\" to time of flight sensor queue with error code %d", queue_message_type_to_name(outgoing_message.type), ret);
                 }
             }
             break;
 
-        case MESSAGE_CARD_READER_CARD_INVALID:
-            outgoing_message = MESSAGE_BUZZER_CARD_INVALID;
-            ret = xQueueSendToBack(queue_buzzer_handle, &outgoing_message, portMAX_DELAY);
-            if (ret != ESP_OK)
+        case MESSAGE_TYPE_CARD_READER_CARD_INVALID:
+            outgoing_message.type = MESSAGE_TYPE_BUZZER_CARD_INVALID;
+            ret = xQueueSendToBack(queue_handle_buzzer, &outgoing_message, portMAX_DELAY);
+            if (ret != pdTRUE)
             {
-                ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", outgoing_message, ret);
+                ESP_LOGE(TAG, "Failed to send message \"%s\" to card buzzer queue with error code %d", queue_message_type_to_name(outgoing_message.type), ret);
             }
 
             if (system_armed && !system_trigerred)
             {
                 // start alarm
-                outgoing_message = MESSAGE_BUZZER_ALARM_START;
-                ret = xQueueSendToBack(queue_buzzer_handle, &outgoing_message, portMAX_DELAY);
-                if (ret != ESP_OK)
+                outgoing_message.type = MESSAGE_TYPE_BUZZER_ALARM_START;
+                ret = xQueueSendToBack(queue_handle_buzzer, &outgoing_message, portMAX_DELAY);
+                if (ret != pdTRUE)
                 {
-                    ESP_LOGE(TAG, "Failed to send message with code %d to buzzer queue with error code %d", outgoing_message, ret);
+                    ESP_LOGE(TAG, "Failed to send message \"%s\" to buzzer queue with error code %d", queue_message_type_to_name(outgoing_message.type), ret);
                 }
             }
             break;
 
         default:
-            ESP_LOGE(TAG, "Received unknown message type with enum number: %d", incoming_message.message);
+            ESP_LOGE(TAG, "Received unknown message type \"%s\"", queue_message_type_to_name(incoming_message.type));
             break;
         }
     }
@@ -125,22 +126,8 @@ static void task_orchastrator_handler(void *)
 
 esp_err_t task_orchastrator_init(void)
 {
-    esp_err_t esp_ret = app_wifi_init();
-    if (esp_ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to initialize wifi: %s", esp_err_to_name(esp_ret));
-        // TODO add cleanup
-    }
-
-    esp_ret = time_sync_init();
-    if (esp_ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to synchronize time: %s", esp_err_to_name(esp_ret));
-        // TODO add cleanup
-    }
-
     ESP_LOGD(TAG, "Initializing accelerometer...");
-    esp_ret = accelerometer_init();
+    esp_err_t esp_ret = accelerometer_init();
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to initialize accelerometer: %s", esp_err_to_name(esp_ret));
@@ -175,7 +162,7 @@ esp_err_t task_orchastrator_init(void)
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to initialize metrics publisher: %s", esp_err_to_name(esp_ret));
-        // TODO add cleanup
+        goto cleanup_time_of_flight;
     }
 
     ESP_LOGD(TAG, "creating task orchastrator freertos task...");
@@ -184,37 +171,44 @@ esp_err_t task_orchastrator_init(void)
     {
         ESP_LOGE(TAG, "Failed to create task with error code: %d", rtos_ret);
         esp_ret = ESP_FAIL;
-        goto cleanup_time_of_flight;
+        goto cleanup_metrics_publisher;
     }
 
     return ESP_OK;
 
-cleanup_time_of_flight:
-    esp_err_t cleanup_esp_ret = time_of_flight_deinit();
-    if (cleanup_esp_ret != ESP_OK)
+cleanup_metrics_publisher:
+    esp_err_t cleanup_ret = metrics_publisher_deinit();
+    if (cleanup_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to deinitialize time_of_flight: %s. Aborting program.", esp_err_to_name(cleanup_esp_ret));
+        ESP_LOGE(TAG, "Failed to deinitialize metrics publisher: %s .aborting program.", esp_err_to_name(cleanup_ret));
+        abort();
+    }
+cleanup_time_of_flight:
+    cleanup_ret = time_of_flight_deinit();
+    if (cleanup_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to deinitialize time_of_flight: %s. Aborting program.", esp_err_to_name(cleanup_ret));
         abort();
     }
 cleanup_card_reader:
-    cleanup_esp_ret = card_reader_deinit();
-    if (cleanup_esp_ret != ESP_OK)
+    cleanup_ret = card_reader_deinit();
+    if (cleanup_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to deinitialize card_reader: %s. Aborting program.", esp_err_to_name(cleanup_esp_ret));
+        ESP_LOGE(TAG, "Failed to deinitialize card_reader: %s. Aborting program.", esp_err_to_name(cleanup_ret));
         abort();
     }
 cleanup_buzzer:
-    cleanup_esp_ret = buzzer_deinit();
-    if (cleanup_esp_ret != ESP_OK)
+    cleanup_ret = buzzer_deinit();
+    if (cleanup_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to deinitialize buzzer: %s. Aborting program.", esp_err_to_name(cleanup_esp_ret));
+        ESP_LOGE(TAG, "Failed to deinitialize buzzer: %s. Aborting program.", esp_err_to_name(cleanup_ret));
         abort();
     }
 cleanup_accelerometer:
-    cleanup_esp_ret = accelerometer_deinit();
-    if (cleanup_esp_ret != ESP_OK)
+    cleanup_ret = accelerometer_deinit();
+    if (cleanup_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to deinitialize accelerometer: %s. Aborting program.", esp_err_to_name(cleanup_esp_ret));
+        ESP_LOGE(TAG, "Failed to deinitialize accelerometer: %s. Aborting program.", esp_err_to_name(cleanup_ret));
         abort();
     }
 cleanup_nothing:

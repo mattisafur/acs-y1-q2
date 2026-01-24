@@ -15,7 +15,7 @@
 
 static const char *TAG = "metrics publisher";
 
-#define METRICS_PUBLISH ER_ENDPOINT_URL "http://4.233.137.69/metrics"
+#define METRICS_PUBLISHER_ENDPOINT_URL "http://4.233.137.69/metrics"
 
 static TaskHandle_t task_handle;
 
@@ -79,7 +79,7 @@ static cJSON *metric_to_cjson(metric_t *metric)
         break;
 
     default:
-        ESP_LOGE(TAG, "Unknown metric type enum: %d", metric->metric_type);
+        ESP_LOGE(TAG, "Unknown metric type: %s", queue_metric_type_to_name(metric->metric_type));
         break;
     }
 
@@ -91,7 +91,7 @@ static void metrics_publisher_handler(void *)
     for (;;)
     {
         metric_t msg;
-        xQueueReceive(queue_metrics_handle, &msg, portMAX_DELAY);
+        xQueueReceive(queue_handle_metrics, &msg, portMAX_DELAY);
 
         cJSON *metric_json = metric_to_cjson(&msg);
 
@@ -125,7 +125,7 @@ esp_err_t metrics_publisher_init(void)
         goto cleanup_none;
     }
 
-    BaseType_t rtos_ret = xTaskCreate(metrics_publisher_handler, "Metrics publisher", 8192, NULL, tskIDLE_PRIORITY, &task_handle);
+    BaseType_t rtos_ret = xTaskCreate(metrics_publisher_handler, "Metrics publisher", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to craete task with error code: %d", rtos_ret);

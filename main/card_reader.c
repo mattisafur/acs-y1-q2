@@ -9,6 +9,8 @@
 #include "app_config.h"
 #include "queue.h"
 
+static const char *TAG = "card reader";
+
 #define CARD_READER_UART_NUM UART_NUM_1
 #define CARD_READER_UART_GPIO_RX GPIO_NUM_26
 #define CARD_READER_UART_GPIO_TX GPIO_NUM_25
@@ -16,8 +18,6 @@
 #define CARD_READER_UART_RX_BUFFER_SIZE 256
 #define CARD_READER_UART_BAUD_RATE 2400
 #define CARD_READER_TAG_ID "01004B1DA2"
-
-static const char *TAG = "card reader";
 
 static TaskHandle_t task_handle;
 
@@ -45,11 +45,11 @@ static void card_reader_task_handler(void *)
                     ESP_LOGI(TAG, "Valid RFID tag detected: %s", id);
                     valid = true;
 
-                    orchastrator_return_message_t tx_msg = {
+                    message_t tx_msg = {
                         .component = COMPONENT_CARD_READER,
-                        .message = valid ? MESSAGE_CARD_READER_CARD_VALID : MESSAGE_CARD_READER_CARD_INVALID,
+                        .type = valid ? MESSAGE_TYPE_CARD_READER_CARD_VALID : MESSAGE_TYPE_CARD_READER_CARD_INVALID,
                     };
-                    BaseType_t q_ret = xQueueSendToBack(queue_task_return_handle, &tx_msg, 0);
+                    BaseType_t q_ret = xQueueSendToBack(queue_handle_task_orchastrator, &tx_msg, 0);
                     if (q_ret != pdTRUE)
                     {
                         ESP_LOGE(TAG, "Failed to send card read result to queue with error code: %d", q_ret);
@@ -60,18 +60,18 @@ static void card_reader_task_handler(void *)
                         .timestamp = time(NULL),
                         .bool_value = valid ? true : false,
                     };
-                    xQueueSendToBack(queue_metrics_handle, &metric_card_reader_valid, 0);
+                    xQueueSendToBack(queue_handle_metrics, &metric_card_reader_valid, 0);
                 }
                 else
                 {
                     ESP_LOGW(TAG, "Invalid RFID tag detected: %s", id);
                     valid = false;
 
-                    orchastrator_return_message_t tx_msg = {
+                    message_t tx_msg = {
                         .component = COMPONENT_CARD_READER,
-                        .message = valid ? MESSAGE_CARD_READER_CARD_VALID : MESSAGE_CARD_READER_CARD_INVALID,
+                        .type = valid ? MESSAGE_TYPE_CARD_READER_CARD_VALID : MESSAGE_TYPE_CARD_READER_CARD_INVALID,
                     };
-                    BaseType_t q_ret = xQueueSendToBack(queue_card_reader_handle, &tx_msg, 0);
+                    BaseType_t q_ret = xQueueSendToBack(queue_handle_task_orchastrator, &tx_msg, 0);
                     if (q_ret != pdPASS)
                     {
                         ESP_LOGE(TAG, "Failed to send card read result to queue with error code: %d", q_ret);
@@ -82,7 +82,7 @@ static void card_reader_task_handler(void *)
                         .timestamp = time(NULL),
                         .bool_value = valid ? true : false,
                     };
-                    xQueueSendToBack(queue_metrics_handle, &metric_card_reader_valid, portMAX_DELAY);
+                    xQueueSendToBack(queue_handle_metrics, &metric_card_reader_valid, 0);
                 }
             }
             while (len > 0)

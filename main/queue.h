@@ -7,41 +7,43 @@
 #include <stdint.h>
 #include <time.h>
 
-extern QueueHandle_t queue_task_return_handle;
-extern QueueHandle_t queue_card_reader_handle;
-extern QueueHandle_t queue_buzzer_handle;
-extern QueueHandle_t queue_accelerometer_handle;
-extern QueueHandle_t queue_time_of_flight_handle;
-extern QueueHandle_t queue_metrics_handle;
+extern QueueHandle_t queue_handle_task_orchastrator;
+extern QueueHandle_t queue_handle_card_reader;
+extern QueueHandle_t queue_handle_buzzer;
+extern QueueHandle_t queue_handle_accelerometer;
+extern QueueHandle_t queue_handle_time_of_flight;
+extern QueueHandle_t queue_handle_metrics;
 
-typedef enum message_t
+typedef enum
 {
-    MESSAGE_ENABLE,  // enable task
-    MESSAGE_DISABLE, // disbale task
-    MESSAGE_SENSOR_TRIGGERED,
-    MESSAGE_BUZZER_ALARM_START,
-    MESSAGE_BUZZER_ALARM_STOP,
-    MESSAGE_BUZZER_CARD_VALID,
-    MESSAGE_BUZZER_CARD_INVALID,
-    MESSAGE_CARD_READER_CARD_VALID,
-    MESSAGE_CARD_READER_CARD_INVALID,
-} message_t;
+    MESSAGE_TYPE_ENABLE,
+    MESSAGE_TYPE_DISABLE,
+    MESSAGE_TYPE_SENSOR_TRIGGERED,
+    MESSAGE_TYPE_BUZZER_ALARM_START,
+    MESSAGE_TYPE_BUZZER_ALARM_STOP,
+    MESSAGE_TYPE_BUZZER_CARD_VALID,
+    MESSAGE_TYPE_BUZZER_CARD_INVALID,
+    MESSAGE_TYPE_CARD_READER_CARD_VALID,
+    MESSAGE_TYPE_CARD_READER_CARD_INVALID,
+} message_type_t;
 
-typedef enum component_t
+typedef enum
 {
+    COMPONENT_TASK_ORCHASTRATOR,
+    COMPONENT_METRICS_PUBLISHER,
     COMPONENT_BUZZER,
     COMPONENT_CARD_READER,
     COMPONENT_ACCELEROMETER,
     COMPONENT_TIME_OF_FLIGHT,
 } component_t;
 
-typedef struct orchastrator_return_message_t
+typedef struct
 {
     component_t component;
-    message_t message;
-} orchastrator_return_message_t;
+    message_type_t type;
+} message_t;
 
-typedef enum metric_type_t
+typedef enum
 {
     METRIC_TYPE_ACCELEROMETER_ACCELERATION_X,
     METRIC_TYPE_ACCELEROMETER_ACCELERATION_Y,
@@ -55,7 +57,7 @@ typedef enum metric_type_t
     METRIC_TYPE_CARD_READER_VALID,
 } metric_type_t;
 
-typedef struct metric_t
+typedef struct
 {
     metric_type_t metric_type;
     time_t timestamp;
@@ -68,5 +70,8 @@ typedef struct metric_t
 } metric_t;
 
 esp_err_t queue_init(void);
-
 void queue_deinit(void);
+
+const char *queue_message_type_to_name(message_type_t message_type);
+const char *queue_component_to_name(component_t component);
+const char *queue_metric_type_to_name(metric_type_t metric_type);

@@ -12,22 +12,18 @@
 #include "app_config.h"
 #include "queue.h"
 
+static const char *TAG = "accelerometer";
+
 #define ACCELEROMETER_I2C_PORT_NUM I2C_NUM_1
 #define ACCELEROMETER_I2C_GPIO_SDA GPIO_NUM_32
 #define ACCELEROMETER_I2C_GPIO_SCL GPIO_NUM_33
-
 #define ACCELEROMETER_I2C_ADDR 0x68
-
-#define ACCELERATION_THREASHOLD_ACCELERATION 100
-#define ACCELERATION_THREASHOLD_ROTATION 100
-
-static const char *TAG = "accelerometer";
+#define ACCELERATION_THREASHOLD_ACCELERATION 80
+#define ACCELERATION_THREASHOLD_ROTATION 80
 
 static TaskHandle_t task_handle;
 
 static mpu6050_dev_t device_descriptor;
-// static float acceleration_bias[3];
-// static float rotation_bias[3];
 
 /**
  * @brief Calculates the Euclidean norm of a 3D vector.
@@ -49,17 +45,17 @@ static void accelerometer_task_handler(void *)
     for (;;)
     {
         message_t message;
-        BaseType_t ret = xQueueReceive(queue_accelerometer_handle, &message, 0);
+        BaseType_t ret = xQueueReceive(queue_handle_accelerometer, &message, 0);
 
         if (ret == pdTRUE)
         {
-            switch (message)
+            switch (message.type)
             {
-            case MESSAGE_ENABLE:
+            case MESSAGE_TYPE_ENABLE:
                 enabled = true;
                 break;
 
-            case MESSAGE_DISABLE:
+            case MESSAGE_TYPE_DISABLE:
                 enabled = false;
                 break;
 
@@ -89,11 +85,11 @@ static void accelerometer_task_handler(void *)
 
             if (acceleration_sum > ACCELERATION_THREASHOLD_ACCELERATION || rotation_sum > ACCELERATION_THREASHOLD_ROTATION)
             {
-                const orchastrator_return_message_t alarm_message = {
+                const message_t alarm_message = {
                     .component = COMPONENT_ACCELEROMETER,
-                    .message = MESSAGE_SENSOR_TRIGGERED,
+                    .type = MESSAGE_TYPE_SENSOR_TRIGGERED,
                 };
-                xQueueSendToBack(queue_task_return_handle, &alarm_message, portMAX_DELAY);
+                xQueueSendToBack(queue_handle_task_orchastrator, &alarm_message, portMAX_DELAY);
             }
 
             const metric_t metric_acceleration_x = {
@@ -101,49 +97,49 @@ static void accelerometer_task_handler(void *)
                 .timestamp = time(NULL),
                 .float_value = acceleration.x,
             };
-            xQueueSendToBack(queue_metrics_handle, &metric_acceleration_x, 0);
+            xQueueSendToBack(queue_handle_metrics, &metric_acceleration_x, 0);
             const metric_t metric_acceleration_y = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ACCELERATION_Y,
                 .timestamp = time(NULL),
                 .float_value = acceleration.y,
             };
-            xQueueSendToBack(queue_metrics_handle, &metric_acceleration_y, 0);
+            xQueueSendToBack(queue_handle_metrics, &metric_acceleration_y, 0);
             const metric_t metric_acceleration_z = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ACCELERATION_Z,
                 .timestamp = time(NULL),
                 .float_value = acceleration.z,
             };
-            xQueueSendToBack(queue_metrics_handle, &metric_acceleration_z, 0);
+            xQueueSendToBack(queue_handle_metrics, &metric_acceleration_z, 0);
             const metric_t metric_acceleration_total = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ACCELERATION_TOTAL,
                 .timestamp = time(NULL),
                 .float_value = acceleration_sum,
             };
-            xQueueSendToBack(queue_metrics_handle, &metric_acceleration_total, 0);
+            xQueueSendToBack(queue_handle_metrics, &metric_acceleration_total, 0);
             const metric_t metric_rotation_x = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ROTATION_X,
                 .timestamp = time(NULL),
                 .float_value = rotation.x,
             };
-            xQueueSendToBack(queue_metrics_handle, &metric_rotation_x, 0);
+            xQueueSendToBack(queue_handle_metrics, &metric_rotation_x, 0);
             const metric_t metric_rotation_y = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ROTATION_Y,
                 .timestamp = time(NULL),
                 .float_value = rotation.y,
             };
-            xQueueSendToBack(queue_metrics_handle, &metric_rotation_y, 0);
+            xQueueSendToBack(queue_handle_metrics, &metric_rotation_y, 0);
             const metric_t metric_rotation_z = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ROTATION_Z,
                 .timestamp = time(NULL),
                 .float_value = rotation.z,
             };
-            xQueueSendToBack(queue_metrics_handle, &metric_rotation_z, 0);
+            xQueueSendToBack(queue_handle_metrics, &metric_rotation_z, 0);
             const metric_t metric_rotation_total = {
                 .metric_type = METRIC_TYPE_ACCELEROMETER_ROTATION_TOTAL,
                 .timestamp = time(NULL),
                 .float_value = rotation_sum,
             };
-            xQueueSendToBack(queue_metrics_handle, &metric_rotation_total, 0);
+            xQueueSendToBack(queue_handle_metrics, &metric_rotation_total, 0);
         }
         vTaskDelay(pdMS_TO_TICKS(10));
     }
@@ -202,14 +198,6 @@ esp_err_t accelerometer_init(void)
         ESP_LOGE(TAG, "Failed to initialize device: %s", esp_err_to_name(esp_ret));
         goto cleanup_device_descriptor;
     }
-
-    // ESP_LOGD(TAG, "Calibrating sensor...");
-    // esp_ret = mpu6050_calibrate(&device_descriptor, acceleration_bias, rotation_bias);
-    // if (esp_ret != ESP_OK)
-    // {
-    //     ESP_LOGE(TAG, "Failed to calibrate sensor: %s", esp_err_to_name(esp_ret));
-    //     goto cleanup_device_descriptor;
-    // }
 
     ESP_LOGD(TAG, "Initializing accelerometer freertos task...");
     BaseType_t rtos_ret = xTaskCreate(accelerometer_task_handler, "Accelerometer", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);

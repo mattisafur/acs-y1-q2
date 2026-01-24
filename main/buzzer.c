@@ -10,16 +10,12 @@
 #include "app_config.h"
 #include "queue.h"
 
-#define PIN_BUZZER GPIO_NUM_12
-
-#define ALARM_QUEUE_SIZE_ITEMS 16
-
 static const char *TAG = "buzzer";
+
+#define PIN_BUZZER GPIO_NUM_12
 
 static TaskHandle_t buzzer_task_handle;
 static TaskHandle_t alarm_task_handle;
-
-static bool alarm_running = false;
 
 static QueueHandle_t alarm_queue_handle;
 
@@ -29,6 +25,20 @@ typedef enum alarm_queue_message_t
     ALARM_QUEUE_MESSAGE_STOP,
 } alarm_queue_message_t;
 
+static const char *alarm_queue_message_to_name(alarm_queue_message_t message)
+{
+    switch (message)
+    {
+    case ALARM_QUEUE_MESSAGE_START:
+        return "ALARM_QUEUE_MESSAGE_START";
+    case ALARM_QUEUE_MESSAGE_STOP:
+        return "ALARM_QUEUE_MESSAGE_STOP";
+    default:
+        ESP_LOGE(TAG, "Received invalid alarm message, enum code %d.", message);
+        return "INVALID_MESSAGE_TYPE";
+    }
+}
+
 /**
  * @brief Task handler for buzzer control.
  * Processes messages from the buzzer queue and controls the alarm.
@@ -36,34 +46,36 @@ typedef enum alarm_queue_message_t
  */
 static void buzzer_task_handler(void *)
 {
+    bool alarm_running = false;
     for (;;)
     {
         message_t incoming_message;
-        xQueueReceive(queue_buzzer_handle, &incoming_message, portMAX_DELAY);
+        xQueueReceive(queue_handle_buzzer, &incoming_message, portMAX_DELAY);
         ESP_LOGD(TAG, "Received message from buzzer queue: %d", incoming_message);
 
         alarm_queue_message_t outgoing_message;
-        switch (incoming_message)
+        switch (incoming_message.type)
         {
-        case MESSAGE_BUZZER_ALARM_START:
+        case MESSAGE_TYPE_BUZZER_ALARM_START:
             outgoing_message = ALARM_QUEUE_MESSAGE_START;
             xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
             alarm_running = true;
             break;
 
-        case MESSAGE_BUZZER_ALARM_STOP:
+        case MESSAGE_TYPE_BUZZER_ALARM_STOP:
             outgoing_message = ALARM_QUEUE_MESSAGE_STOP;
             xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
             alarm_running = false;
             break;
 
-        case MESSAGE_BUZZER_CARD_VALID:
+        case MESSAGE_TYPE_BUZZER_CARD_VALID:
             if (alarm_running)
             {
                 ESP_LOGD(TAG, "Temporarily stopping alarm");
                 outgoing_message = ALARM_QUEUE_MESSAGE_STOP;
                 xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
             }
+
             gpio_set_level(PIN_BUZZER, 1);
             vTaskDelay(pdMS_TO_TICKS(150));
             gpio_set_level(PIN_BUZZER, 0);
@@ -76,7 +88,7 @@ static void buzzer_task_handler(void *)
             }
             break;
 
-        case MESSAGE_BUZZER_CARD_INVALID:
+        case MESSAGE_TYPE_BUZZER_CARD_INVALID:
             if (alarm_running)
             {
                 ESP_LOGD(TAG, "Temporarily stopping alarm");
@@ -210,7 +222,7 @@ esp_err_t buzzer_init(void)
         goto cleanup_buzzer_task;
     }
 
-    alarm_queue_handle = xQueueCreate(ALARM_QUEUE_SIZE_ITEMS, sizeof(alarm_queue_message_t));
+    alarm_queue_handle = xQueueCreate(APP_CONFIG_QUEUE_SIZE_ITEMS, sizeof(alarm_queue_message_t));
     if (alarm_queue_handle == NULL)
     {
         ESP_LOGE(TAG, "Failed to initialize alarm queue");
