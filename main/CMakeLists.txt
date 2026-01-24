@@ -1,17 +1,18 @@
 idf_component_register(
     SRCS
-     "accelerometer.c"
-     "app_wifi.c"
-     "buzzer.c"
-     "card_reader.c"
-     "main.c"
-     "metrics_publisher.c"
-     "queue.c"
-     "task_orchastrator.c"
-     "time_of_flight.c"
-     "time_sync.c"
+        "accelerometer.c"
+        "app_wifi.c"
+        "buzzer.c"
+        "card_reader.c"
+        "main.c"
+        "metrics_publisher.c"
+        "queue.c"
+        "task_orchastrator.c"
+        "time_of_flight.c"
+        "time_sync.c"
     
-    INCLUDE_DIRS "."
+    INCLUDE_DIRS
+        "."
     
     REQUIRES
         esp_driver_i2c
