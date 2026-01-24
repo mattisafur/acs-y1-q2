@@ -15,7 +15,7 @@
 
 static const char *TAG = "metrics publisher";
 
-#define METRICS_PUBLISHER_ENDPOINT_URL "http://4.233.137.69/metrics"
+#define METRICS_PUBLISH ER_ENDPOINT_URL "http://4.233.137.69/metrics"
 
 static TaskHandle_t task_handle;
 

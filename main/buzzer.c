@@ -120,10 +120,9 @@ static void buzzer_task_handler(void *)
 static void alarm_task_handler(void *)
 {
     bool enabled = false;
-    alarm_queue_message_t message;
     for (;;)
     {
-
+        alarm_queue_message_t message;
         const BaseType_t ret = xQueueReceive(alarm_queue_handle, &message, 0);
 
         if (ret == pdTRUE)
