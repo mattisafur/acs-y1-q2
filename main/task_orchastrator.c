@@ -126,8 +126,12 @@ static void task_orchastrator_handler(void *)
 
 esp_err_t task_orchastrator_init(void)
 {
+    esp_err_t esp_ret;
+    BaseType_t rtos_ret;
+    esp_err_t cleanup_ret;
+
     ESP_LOGD(TAG, "Initializing accelerometer...");
-    esp_err_t esp_ret = accelerometer_init();
+    esp_ret = accelerometer_init();
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to initialize accelerometer: %s", esp_err_to_name(esp_ret));
@@ -166,7 +170,7 @@ esp_err_t task_orchastrator_init(void)
     }
 
     ESP_LOGD(TAG, "creating task orchastrator freertos task...");
-    BaseType_t rtos_ret = xTaskCreate(task_orchastrator_handler, "Task Orchastrator", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
+    rtos_ret = xTaskCreate(task_orchastrator_handler, "Task Orchastrator", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to create task with error code: %d", rtos_ret);
@@ -177,7 +181,7 @@ esp_err_t task_orchastrator_init(void)
     return ESP_OK;
 
 cleanup_metrics_publisher:
-    esp_err_t cleanup_ret = metrics_publisher_deinit();
+    cleanup_ret = metrics_publisher_deinit();
     if (cleanup_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to deinitialize metrics publisher: %s .aborting program.", esp_err_to_name(cleanup_ret));

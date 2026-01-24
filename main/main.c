@@ -10,6 +10,7 @@ static const char *TAG = "main";
 void app_main(void)
 {
     esp_err_t ret;
+    esp_err_t cleanup_ret;
 
     ESP_LOGI(TAG, "Initializing queues...");
     ret = queue_init();
@@ -47,7 +48,7 @@ void app_main(void)
 
 cleanup_wifi:
     ESP_LOGI(TAG, "Deinitializing wifi...");
-    esp_err_t cleanup_ret = app_wifi_deinit();
+    cleanup_ret = app_wifi_deinit();
     if (cleanup_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to deinitialize wifi: %s. aborting program.", esp_err_to_name(cleanup_ret));

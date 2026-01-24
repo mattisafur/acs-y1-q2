@@ -119,15 +119,14 @@ static void metrics_publisher_handler(void *)
     }
 }
 
-static esp_err_t http_event_handler(esp_http_client_event_t *event)
-{
-
-    return ESP_OK;
-}
+static esp_err_t http_event_handler(esp_http_client_event_t *event) { return ESP_OK; }
 
 esp_err_t metrics_publisher_init(void)
 {
     esp_err_t esp_ret;
+    BaseType_t rtos_ret;
+    esp_err_t cleanup_ret;
+
     esp_http_client_config_t http_client_config = {
         .url = METRICS_PUBLISHER_ENDPOINT_URL,
         .method = HTTP_METHOD_POST,
@@ -140,7 +139,7 @@ esp_err_t metrics_publisher_init(void)
         goto cleanup_none;
     }
 
-    BaseType_t rtos_ret = xTaskCreate(metrics_publisher_handler, "Metrics publisher", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
+    rtos_ret = xTaskCreate(metrics_publisher_handler, "Metrics publisher", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to craete task with error code: %d", rtos_ret);
@@ -151,7 +150,7 @@ esp_err_t metrics_publisher_init(void)
     return ESP_OK;
 
 cleanup_http_client:
-    esp_err_t cleanup_ret = esp_http_client_cleanup(http_client_handle);
+    cleanup_ret = esp_http_client_cleanup(http_client_handle);
     if (cleanup_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to clean up HTTP client: %s. aborting program.", esp_err_to_name(cleanup_ret));
@@ -163,7 +162,9 @@ cleanup_none:
 
 esp_err_t metrics_publisher_deinit(void)
 {
-    esp_err_t ret = esp_http_client_cleanup(http_client_handle);
+    esp_err_t ret;
+
+    ret = esp_http_client_cleanup(http_client_handle);
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to clean up HTTP client: %s", esp_err_to_name(ret));

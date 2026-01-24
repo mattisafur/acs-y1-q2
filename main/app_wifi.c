@@ -29,23 +29,36 @@ static void wifi_event_handler(void *, esp_event_base_t event_base, int32_t even
 
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
     {
+        ESP_LOGD(TAG, "Received wifi start event.");
+
+        ESP_LOGD(TAG, "Connecting to wifi...");
         esp_wifi_connect();
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
+        ESP_LOGD(TAG, "Received wifi disconnected event.");
+        ESP_LOGD(TAG, "Reconnect counter: %d", reconnect_count);
+
         if (reconnect_count > APP_WIFI_RECONNECT_MAX_RETRY)
         {
+            ESP_LOGD(TAG, "Setting wifi fail bit...");
             xEventGroupSetBits(wifi_event_group_handle, APP_WIFI_BIT_FAIL);
             return;
         }
 
         ESP_LOGW(TAG, "Disconnected from wifi, reconnecting...");
+        ESP_LOGD(TAG, "Reconnecting to wifi...");
         esp_wifi_connect();
         reconnect_count++;
     }
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
     {
+        ESP_LOGD(TAG, "Received got ip event.");
+
+        ESP_LOGD(TAG, "Resetting reconnect couter...");
         reconnect_count = 0;
+
+        ESP_LOGD(TAG, "Setting wifi connected bit...");
         xEventGroupSetBits(wifi_event_group_handle, APP_WIFI_BIT_CONNECTED);
     }
 }
@@ -53,6 +66,7 @@ static void wifi_event_handler(void *, esp_event_base_t event_base, int32_t even
 esp_err_t app_wifi_init(void)
 {
     esp_err_t ret;
+    esp_err_t cleanup_ret;
 
     ESP_LOGI(TAG, "Initializing NVS flash...");
     ret = nvs_flash_init();
@@ -176,13 +190,15 @@ esp_err_t app_wifi_init(void)
     return ESP_OK;
 
 cleanup_wifi_start:
-    esp_err_t cleanup_ret = esp_wifi_stop();
+    ESP_LOGI(TAG, "Stopping wifi...");
+    cleanup_ret = esp_wifi_stop();
     if (cleanup_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to stop wifi: %s, aborting program", esp_err_to_name(cleanup_ret));
         abort();
     }
 cleanup_ip_event_handler:
+    ESP_LOGI(TAG, "Unregistering ip event handler...");
     cleanup_ret = esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event_handler_instance);
     if (cleanup_ret != ESP_OK)
     {
@@ -190,6 +206,7 @@ cleanup_ip_event_handler:
         abort();
     }
 cleanup_wifi_event_handler:
+    ESP_LOGI(TAG, "Unregistering wifi event handler...");
     cleanup_ret = esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_handler_instance);
     if (cleanup_ret != ESP_OK)
     {
@@ -197,6 +214,7 @@ cleanup_wifi_event_handler:
         abort();
     }
 cleanup_wifi:
+    ESP_LOGI(TAG, "Deinitializing wifi...");
     cleanup_ret = esp_wifi_deinit();
     if (cleanup_ret != ESP_OK)
     {
@@ -204,6 +222,7 @@ cleanup_wifi:
         abort();
     }
 cleanup_event_loop:
+    ESP_LOGI(TAG, "Deleting default event loop...");
     cleanup_ret = esp_event_loop_delete_default();
     if (cleanup_ret != ESP_OK)
     {
@@ -211,6 +230,7 @@ cleanup_event_loop:
         abort();
     }
 cleanup_netif:
+    ESP_LOGI(TAG, "Deinitializing netif...");
     cleanup_ret = esp_netif_deinit();
     if (cleanup_ret != ESP_OK)
     {
@@ -218,8 +238,11 @@ cleanup_netif:
         abort();
     }
 cleanup_wifi_event_group:
+    ESP_LOGI(TAG, "Deleting wifi event group...");
     vEventGroupDelete(wifi_event_group_handle);
+    wifi_event_group_handle = NULL;
 cleanup_nvs_flash:
+    ESP_LOGI(TAG, "Deinitializing NVS flash...");
     cleanup_ret = nvs_flash_deinit();
     if (cleanup_ret != ESP_OK)
     {
@@ -232,13 +255,17 @@ cleanup_nothing:
 
 esp_err_t app_wifi_deinit(void)
 {
-    esp_err_t ret = esp_wifi_stop();
+    esp_err_t ret;
+
+    ESP_LOGI(TAG, "Stopping wifi...");
+    ret = esp_wifi_stop();
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to stop wifi: %s", esp_err_to_name(ret));
         return ret;
     }
 
+    ESP_LOGI(TAG, "Unregistering ip event handler...");
     ret = esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event_handler_instance);
     if (ret != ESP_OK)
     {
@@ -246,6 +273,7 @@ esp_err_t app_wifi_deinit(void)
         return ret;
     }
 
+    ESP_LOGI(TAG, "Unregistering wifi event handler...");
     ret = esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_handler_instance);
     if (ret != ESP_OK)
     {
@@ -253,6 +281,7 @@ esp_err_t app_wifi_deinit(void)
         return ret;
     }
 
+    ESP_LOGI(TAG, "Deinitializing wifi...");
     ret = esp_wifi_deinit();
     if (ret != ESP_OK)
     {
@@ -260,6 +289,7 @@ esp_err_t app_wifi_deinit(void)
         return ret;
     }
 
+    ESP_LOGI(TAG, "Deleting default event loop...");
     ret = esp_event_loop_delete_default();
     if (ret != ESP_OK)
     {
@@ -267,6 +297,7 @@ esp_err_t app_wifi_deinit(void)
         return ret;
     }
 
+    ESP_LOGI(TAG, "Deinitializing netif...");
     ret = esp_netif_deinit();
     if (ret != ESP_OK)
     {
@@ -274,8 +305,11 @@ esp_err_t app_wifi_deinit(void)
         return ret;
     }
 
+    ESP_LOGI(TAG, "Deleting wifi event group...");
     vEventGroupDelete(wifi_event_group_handle);
+    wifi_event_group_handle = NULL;
 
+    ESP_LOGI(TAG, "Deinitializing NVS flash...");
     ret = nvs_flash_deinit();
     if (ret != ESP_OK)
     {

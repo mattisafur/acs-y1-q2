@@ -96,6 +96,11 @@ static void card_reader_task_handler(void *)
 
 esp_err_t card_reader_init(void)
 {
+    esp_err_t esp_ret;
+    BaseType_t rtos_ret;
+    esp_err_t cleanup_ret;
+
+    ESP_LOGI(TAG, "Configuring UART parameter...");
     uart_config_t uart_config = {
         .baud_rate = CARD_READER_UART_BAUD_RATE,
         .data_bits = UART_DATA_8_BITS,
@@ -104,38 +109,30 @@ esp_err_t card_reader_init(void)
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
         .source_clk = UART_SCLK_APB,
     };
-    // Set UART parameters
-    esp_err_t esp_ret = uart_param_config(CARD_READER_UART_NUM, &uart_config);
+    esp_ret = uart_param_config(CARD_READER_UART_NUM, &uart_config);
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to configure UART parameters: %s", esp_err_to_name(esp_ret));
-        return esp_ret;
+        goto cleanup_nothing;
     }
 
-    // Set UART pins
-    esp_ret = uart_set_pin(CARD_READER_UART_NUM,
-                           CARD_READER_UART_GPIO_TX,
-                           CARD_READER_UART_GPIO_RX,
-                           UART_PIN_NO_CHANGE,
-                           UART_PIN_NO_CHANGE);
+    ESP_LOGI(TAG, "Setting UART pins");
+    esp_ret = uart_set_pin(CARD_READER_UART_NUM, CARD_READER_UART_GPIO_TX, CARD_READER_UART_GPIO_RX, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to set UART pins: %s", esp_err_to_name(esp_ret));
-        return esp_ret;
+        goto cleanup_nothing;
     }
 
-    // Install UART driver ONCE
-    esp_ret = uart_driver_install(CARD_READER_UART_NUM,
-                                  CARD_READER_UART_RX_BUFFER_SIZE,
-                                  0,
-                                  0,
-                                  NULL,
-                                  0);
+    ESP_LOGI(TAG, "Installing UART driver...");
+    esp_ret = uart_driver_install(CARD_READER_UART_NUM, CARD_READER_UART_RX_BUFFER_SIZE, 0, 0, NULL, 0);
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to install UART driver: %s", esp_err_to_name(esp_ret));
-        goto cleanup_uart;
+        goto cleanup_nothing;
     }
+
+    ESP_LOGI(TAG, "Configuring GPIO...");
     gpio_config_t config_enable = {
         .pin_bit_mask = 1ULL << CARD_READER_GPIO_ENABLE,
         .mode = GPIO_MODE_OUTPUT,
@@ -143,7 +140,6 @@ esp_err_t card_reader_init(void)
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_DISABLE,
     };
-
     esp_ret = gpio_config(&config_enable);
     if (esp_ret != ESP_OK)
     {
@@ -151,57 +147,65 @@ esp_err_t card_reader_init(void)
         goto cleanup_gpio;
     }
 
-    ESP_LOGD(TAG, "Setting enable pin level to low...");
+    ESP_LOGI(TAG, "Setting initial GPIO level to low...");
     esp_ret = gpio_set_level(CARD_READER_GPIO_ENABLE, 0);
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to set enable pin level to low: %s", esp_err_to_name(esp_ret));
-        goto cleanup_uart;
+        goto cleanup_gpio;
     }
 
-    BaseType_t rtos_ret = xTaskCreate(card_reader_task_handler, "Card Reader", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
+    ESP_LOGI(TAG, "Creating task...");
+    rtos_ret = xTaskCreate(card_reader_task_handler, "Card Reader", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to create card reader task with error code: %d", rtos_ret);
         esp_ret = ESP_FAIL;
-        goto cleanup_uart;
+        goto cleanup_gpio;
     }
 
     return ESP_OK;
 
-cleanup_uart:
-    esp_err_t cleanup_esp_ret = uart_driver_delete(CARD_READER_UART_NUM);
-    if (cleanup_esp_ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to delete UART driver: %s. aborting program", esp_err_to_name(cleanup_esp_ret));
-        abort();
-    }
 cleanup_gpio:
-    cleanup_esp_ret = gpio_reset_pin(CARD_READER_GPIO_ENABLE);
-    if (cleanup_esp_ret != ESP_OK)
+    cleanup_ret = gpio_reset_pin(CARD_READER_GPIO_ENABLE);
+    if (cleanup_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to reset the gpio pin: %s. aborting program", esp_err_to_name(cleanup_esp_ret));
+        ESP_LOGE(TAG, "Failed to reset GPIO pin: %s. aborting progarm.", esp_err_to_name(cleanup_ret));
         abort();
     }
+    // uart cleanup
+    ESP_LOGI(TAG, "Deleting UART driver...");
+    cleanup_ret = uart_driver_delete(CARD_READER_UART_NUM);
+    if (cleanup_ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to delete UART driver: %s. aborting program.", esp_err_to_name(cleanup_ret));
+        abort();
+    }
+cleanup_nothing:
     return esp_ret;
 }
 
 esp_err_t card_reader_deinit(void)
 {
+    esp_err_t ret;
+
+    ESP_LOGI(TAG, "Deleting task...");
     vTaskDelete(task_handle);
     task_handle = NULL;
 
-    esp_err_t ret = uart_driver_delete(CARD_READER_UART_NUM);
-    if (ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to delete UART driver: %s", esp_err_to_name(ret));
-        return ret;
-    }
-
+    ESP_LOGI(TAG, "Reseting GPIO pin...");
     ret = gpio_reset_pin(CARD_READER_GPIO_ENABLE);
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to reset the gpio pin: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    ESP_LOGI(TAG, "Deleting UART driver...");
+    esp_err_t ret = uart_driver_delete(CARD_READER_UART_NUM);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to delete UART driver: %s", esp_err_to_name(ret));
         return ret;
     }
 

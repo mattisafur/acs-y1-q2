@@ -52,7 +52,6 @@ static void buzzer_task_handler(void *)
     {
         message_t incoming_message;
         xQueueReceive(queue_handle_buzzer, &incoming_message, portMAX_DELAY);
-        ESP_LOGD(TAG, "Received message from buzzer queue: %d", incoming_message);
 
         alarm_queue_message_t outgoing_message;
         switch (incoming_message.type)
@@ -72,7 +71,6 @@ static void buzzer_task_handler(void *)
         case MESSAGE_TYPE_BUZZER_CARD_VALID:
             if (alarm_running)
             {
-                ESP_LOGD(TAG, "Temporarily stopping alarm");
                 outgoing_message = ALARM_QUEUE_MESSAGE_STOP;
                 xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
             }
@@ -83,7 +81,6 @@ static void buzzer_task_handler(void *)
 
             if (alarm_running)
             {
-                ESP_LOGD(TAG, "Statring alarm back after stop");
                 outgoing_message = ALARM_QUEUE_MESSAGE_START;
                 xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
             }
@@ -92,7 +89,6 @@ static void buzzer_task_handler(void *)
         case MESSAGE_TYPE_BUZZER_CARD_INVALID:
             if (alarm_running)
             {
-                ESP_LOGD(TAG, "Temporarily stopping alarm");
                 outgoing_message = ALARM_QUEUE_MESSAGE_STOP;
                 xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
             }
@@ -112,7 +108,6 @@ static void buzzer_task_handler(void *)
 
             if (alarm_running)
             {
-                ESP_LOGD(TAG, "Statring alarm back after stop");
                 outgoing_message = ALARM_QUEUE_MESSAGE_START;
                 xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
             }
@@ -141,8 +136,6 @@ static void alarm_task_handler(void *)
 
         if (ret == pdTRUE)
         {
-            ESP_LOGD(TAG, "Received message from alarm queue: %d", message);
-
             switch (message)
             {
             case ALARM_QUEUE_MESSAGE_START:
@@ -183,6 +176,11 @@ static void alarm_task_handler(void *)
 
 esp_err_t buzzer_init(void)
 {
+    esp_err_t esp_ret;
+    BaseType_t rtos_ret;
+    esp_err_t cleanup_ret;
+
+    ESP_LOGI(TAG, "Configuring GPIO...");
     const gpio_config_t config = {
         .pin_bit_mask = 1 << PIN_BUZZER,
         .mode = GPIO_MODE_OUTPUT,
@@ -190,13 +188,14 @@ esp_err_t buzzer_init(void)
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_DISABLE,
     };
-    esp_err_t esp_ret = gpio_config(&config);
+    esp_ret = gpio_config(&config);
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to configure gpio: %s", esp_err_to_name(esp_ret));
         goto cleanup_gpio;
     }
 
+    ESP_LOGI(TAG, "Setting initial GPIO level to low...");
     esp_ret = gpio_set_level(PIN_BUZZER, 0);
     if (esp_ret != ESP_OK)
     {
@@ -204,14 +203,24 @@ esp_err_t buzzer_init(void)
         goto cleanup_gpio;
     }
 
-    BaseType_t rtos_ret = xTaskCreate(buzzer_task_handler, "Buzzer", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &buzzer_task_handle);
+    ESP_LOGI(TAG, "Creating alarm queue...");
+    alarm_queue_handle = xQueueCreate(APP_CONFIG_QUEUE_SIZE_ITEMS, sizeof(alarm_queue_message_t));
+    if (alarm_queue_handle == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to initialize alarm queue");
+        goto cleanup_gpio;
+    }
+
+    ESP_LOGI(TAG, "Creating buzzer task...");
+    rtos_ret = xTaskCreate(buzzer_task_handler, "Buzzer", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &buzzer_task_handle);
     if (rtos_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to create buzzer task with error code: %d", rtos_ret);
         esp_ret = ESP_FAIL;
-        goto cleanup_gpio;
+        goto cleanup_alarm_queue;
     }
 
+    ESP_LOGI(TAG, "Creating alarm task...");
     rtos_ret = xTaskCreate(alarm_task_handler, "Buzzer Alarm", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &alarm_task_handle);
     if (rtos_ret != pdPASS)
     {
@@ -219,26 +228,22 @@ esp_err_t buzzer_init(void)
         goto cleanup_buzzer_task;
     }
 
-    alarm_queue_handle = xQueueCreate(APP_CONFIG_QUEUE_SIZE_ITEMS, sizeof(alarm_queue_message_t));
-    if (alarm_queue_handle == NULL)
-    {
-        ESP_LOGE(TAG, "Failed to initialize alarm queue");
-        goto cleanup_alarm_task;
-    }
-
     return ESP_OK;
 
-cleanup_alarm_task:
-    vTaskDelete(alarm_task_handle);
-    alarm_task_handle = NULL;
 cleanup_buzzer_task:
+    ESP_LOGI(TAG, "Deleting buzzer task...");
     vTaskDelete(buzzer_task_handle);
     buzzer_task_handle = NULL;
+cleanup_alarm_queue:
+    ESP_LOGI(TAG, "Deleting alarm queue...");
+    vQueueDelete(alarm_queue_handle);
+    alarm_queue_handle = NULL;
 cleanup_gpio:
-    esp_err_t cleanup_esp_ret = gpio_reset_pin(PIN_BUZZER);
-    if (cleanup_esp_ret != ESP_OK)
+    ESP_LOGI(TAG, "Resetting GPIO pin...");
+    cleanup_ret = gpio_reset_pin(PIN_BUZZER);
+    if (cleanup_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to reset the gpio pin: %s. aborting program", esp_err_to_name(cleanup_esp_ret));
+        ESP_LOGE(TAG, "Failed to reset the gpio pin: %s. aborting program", esp_err_to_name(cleanup_ret));
         abort();
     }
 
@@ -247,13 +252,22 @@ cleanup_gpio:
 
 esp_err_t buzzer_deinit(void)
 {
+    esp_err_t ret;
+
+    ESP_LOGI(TAG, "Deleting alarm task...");
     vTaskDelete(alarm_task_handle);
     alarm_task_handle = NULL;
 
+    ESP_LOGI(TAG, "Deleting buzzer task...");
     vTaskDelete(buzzer_task_handle);
     buzzer_task_handle = NULL;
 
-    esp_err_t ret = gpio_reset_pin(PIN_BUZZER);
+    ESP_LOGI(TAG, "Deleting alarm queue...");
+    vQueueDelete(alarm_queue_handle);
+    alarm_queue_handle = NULL;
+
+    ESP_LOGI(TAG, "Resetting GPIO pin...");
+    ret = gpio_reset_pin(PIN_BUZZER);
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to reset gpio pin: %s", esp_err_to_name(ret));

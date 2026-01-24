@@ -150,6 +150,10 @@ static void accelerometer_task_handler(void *)
 
 esp_err_t accelerometer_init(void)
 {
+    esp_err_t esp_ret;
+    BaseType_t rtos_ret;
+    esp_err_t cleanup_ret;
+
     ESP_LOGD(TAG, "Intializing i2cdev...");
     esp_err_t esp_ret = i2cdev_init();
     if (esp_ret != ESP_OK)
@@ -209,7 +213,7 @@ esp_err_t accelerometer_init(void)
     return ESP_OK;
 
 cleanup_device_descriptor:
-    esp_err_t cleanup_esp_ret = mpu6050_free_desc(&device_descriptor);
+    cleanup_esp_ret = mpu6050_free_desc(&device_descriptor);
     if (cleanup_esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to free device descriptor: %s", esp_err_to_name(cleanup_esp_ret));
@@ -221,10 +225,12 @@ cleanup_nothing:
 
 esp_err_t accelerometer_deinit(void)
 {
+    esp_err_t ret;
+
     vTaskDelete(task_handle);
     task_handle = NULL;
 
-    esp_err_t ret = mpu6050_free_desc(&device_descriptor);
+    ret = mpu6050_free_desc(&device_descriptor);
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to free device descriptor: %s", esp_err_to_name(ret));

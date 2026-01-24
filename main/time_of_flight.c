@@ -89,6 +89,10 @@ static void time_of_flight_handler(void *)
 
 esp_err_t time_of_flight_init(void)
 {
+    esp_err_t esp_ret;
+    BaseType_t rtos_ret;
+    esp_err_t cleanup_ret;
+
     ESP_LOGD(TAG, "Creating new I2C master bus...");
     i2c_master_bus_config_t i2c_master_bus_config = {
         .i2c_port = TIME_OF_FLIGHT_I2C_PORT_NUM,
@@ -98,15 +102,15 @@ esp_err_t time_of_flight_init(void)
         .glitch_ignore_cnt = 7,
         .flags.enable_internal_pullup = true,
     };
-    esp_err_t ret = i2c_new_master_bus(&i2c_master_bus_config, &i2c_master_bus_handle);
-    if (ret != ESP_OK)
+    esp_ret = i2c_new_master_bus(&i2c_master_bus_config, &i2c_master_bus_handle);
+    if (esp_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to create new I2C master bus: %s", esp_err_to_name(ret));
-        return ret;
+        ESP_LOGE(TAG, "Failed to create new I2C master bus: %s", esp_err_to_name(esp_ret));
+        return esp_ret;
     }
 
     ESP_LOGD(TAG, "Initializing device descriptor...");
-    esp_err_t esp_ret = vl53l1x_init(&device_descriptor, i2c_master_bus_handle, TIME_OF_FLIGHT_I2C_ADDR);
+    esp_ret = vl53l1x_init(&device_descriptor, i2c_master_bus_handle, TIME_OF_FLIGHT_I2C_ADDR);
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to initialize device descriptor: %s", esp_err_to_name(esp_ret));
@@ -162,7 +166,7 @@ esp_err_t time_of_flight_init(void)
     }
 
     ESP_LOGD(TAG, "creating freertos task...");
-    BaseType_t rtos_ret = xTaskCreate(time_of_flight_handler, "Time of Flight", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
+    rtos_ret = xTaskCreate(time_of_flight_handler, "Time of Flight", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to create task with error code: %d", rtos_ret);
@@ -174,7 +178,7 @@ esp_err_t time_of_flight_init(void)
 
 cleanup_start:
     ESP_LOGD(TAG, "cleanup: stopping sensor...");
-    esp_err_t cleanup_ret = vl53l1x_stop(&device_descriptor);
+    cleanup_ret = vl53l1x_stop(&device_descriptor);
     if (cleanup_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to stop sensor: %s. aborting program.", esp_err_to_name(cleanup_ret));
@@ -194,10 +198,12 @@ cleanup_none:
 
 esp_err_t time_of_flight_deinit(void)
 {
+    esp_err_t ret;
+
     vTaskDelete(task_handle);
     task_handle = NULL;
 
-    esp_err_t ret = vl53l1x_stop(&device_descriptor);
+    ret = vl53l1x_stop(&device_descriptor);
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to stop sensor: %s.", esp_err_to_name(ret));
