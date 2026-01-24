@@ -27,6 +27,7 @@ static vl53l1x_t device_descriptor;
 /**
  * @brief Task handler for time of flight sensor.
  * Monitors distance and sends alerts if threshold exceeded.
+ *
  * @param pvParameters Unused.
  */
 static void time_of_flight_handler(void *)
@@ -86,11 +87,6 @@ static void time_of_flight_handler(void *)
     }
 }
 
-/**
- * @brief Initializes the time of flight sensor.
- * Sets up I2C, configures sensor, starts task.
- * @return ESP_OK on success, error code on failure.
- */
 esp_err_t time_of_flight_init(void)
 {
     ESP_LOGD(TAG, "Creating new I2C master bus...");
@@ -196,11 +192,6 @@ cleanup_none:
     return esp_ret;
 }
 
-/**
- * @brief Deinitializes the time of flight sensor.
- * Stops sensor, deletes task.
- * @return ESP_OK on success, error code on failure.
- */
 esp_err_t time_of_flight_deinit(void)
 {
     vTaskDelete(task_handle);
