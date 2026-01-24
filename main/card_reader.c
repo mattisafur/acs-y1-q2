@@ -202,7 +202,7 @@ esp_err_t card_reader_deinit(void)
     }
 
     ESP_LOGI(TAG, "Deleting UART driver...");
-    esp_err_t ret = uart_driver_delete(CARD_READER_UART_NUM);
+    ret = uart_driver_delete(CARD_READER_UART_NUM);
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to delete UART driver: %s", esp_err_to_name(ret));

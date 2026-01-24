@@ -155,7 +155,7 @@ esp_err_t accelerometer_init(void)
     esp_err_t cleanup_ret;
 
     ESP_LOGD(TAG, "Intializing i2cdev...");
-    esp_err_t esp_ret = i2cdev_init();
+    esp_ret = i2cdev_init();
     if (esp_ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to initialize i2cdev: %s", esp_err_to_name(esp_ret));
@@ -202,7 +202,7 @@ esp_err_t accelerometer_init(void)
     }
 
     ESP_LOGD(TAG, "Initializing accelerometer freertos task...");
-    BaseType_t rtos_ret = xTaskCreate(accelerometer_task_handler, "Accelerometer", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
+    rtos_ret = xTaskCreate(accelerometer_task_handler, "Accelerometer", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to create task with error code %d", rtos_ret);
@@ -213,10 +213,10 @@ esp_err_t accelerometer_init(void)
     return ESP_OK;
 
 cleanup_device_descriptor:
-    cleanup_esp_ret = mpu6050_free_desc(&device_descriptor);
-    if (cleanup_esp_ret != ESP_OK)
+    cleanup_ret = mpu6050_free_desc(&device_descriptor);
+    if (cleanup_ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to free device descriptor: %s", esp_err_to_name(cleanup_esp_ret));
+        ESP_LOGE(TAG, "Failed to free device descriptor: %s", esp_err_to_name(cleanup_ret));
         abort();
     }
 cleanup_nothing:

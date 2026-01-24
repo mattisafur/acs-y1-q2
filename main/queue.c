@@ -22,7 +22,7 @@ esp_err_t queue_init(void)
     if (queue_handle_task_orchastrator == NULL)
     {
         ESP_LOGE(TAG, "Failed to create task_orchastrator queue.");
-        return ESP_FAIL;
+        goto cleanup_time_of_flight;
     }
 
     ESP_LOGI(TAG, "Creating card reader queue...");
@@ -30,7 +30,7 @@ esp_err_t queue_init(void)
     if (queue_handle_card_reader == NULL)
     {
         ESP_LOGE(TAG, "Failed to create card_reader queue.");
-        return ESP_FAIL;
+        goto cleanup_accelerometer;
     }
 
     ESP_LOGI(TAG, "Creating buzzer queue...");
@@ -38,7 +38,7 @@ esp_err_t queue_init(void)
     if (queue_handle_buzzer == NULL)
     {
         ESP_LOGE(TAG, "Failed to create buzzer queue.");
-        return ESP_FAIL;
+        goto cleanup_buzzer;
     }
 
     ESP_LOGI(TAG, "Creating accelerometer queue...");
@@ -46,7 +46,7 @@ esp_err_t queue_init(void)
     if (queue_handle_accelerometer == NULL)
     {
         ESP_LOGE(TAG, "Failed to create accelerometer queue.");
-        return ESP_FAIL;
+        goto cleanup_card_reader;
     }
 
     ESP_LOGI(TAG, "Creating time of flight queue...");
@@ -54,7 +54,7 @@ esp_err_t queue_init(void)
     if (queue_handle_time_of_flight == NULL)
     {
         ESP_LOGE(TAG, "Failed to create time of flight queue.");
-        return ESP_FAIL;
+        goto cleanup_task_orchastrator;
     }
 
     ESP_LOGI(TAG, "Creating metric queue...");
@@ -62,7 +62,7 @@ esp_err_t queue_init(void)
     if (queue_handle_metrics == NULL)
     {
         ESP_LOGE(TAG, "Failed to create metric queue.");
-        return ESP_FAIL;
+        goto cleanup_none;
     }
 
     return ESP_OK;
@@ -71,6 +71,7 @@ cleanup_time_of_flight:
     ESP_LOGI(TAG, "Deleting time of flight queue...");
     vQueueDelete(queue_handle_time_of_flight);
     queue_handle_time_of_flight = NULL;
+cleanup_accelerometer:
     ESP_LOGI(TAG, "Deleting accelerometer queue...");
     vQueueDelete(queue_handle_accelerometer);
     queue_handle_accelerometer = NULL;
