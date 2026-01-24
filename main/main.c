@@ -9,13 +9,17 @@ static const char *TAG = "main";
 
 void app_main(void)
 {
-    esp_err_t ret = queue_init();
+    esp_err_t ret;
+
+    ESP_LOGI(TAG, "Initializing queues...");
+    ret = queue_init();
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to initialize queues: %s", esp_err_to_name(ret));
         goto cleanup_none;
     }
 
+    ESP_LOGI(TAG, "Initializing wifi...");
     ret = app_wifi_init();
     if (ret != ESP_OK)
     {
@@ -23,13 +27,15 @@ void app_main(void)
         goto cleanup_queue;
     }
 
+    ESP_LOGI(TAG, "Synchronizing time...");
     ret = time_sync_init();
     if (ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to syncronize time: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG, "Failed to synchronize time: %s", esp_err_to_name(ret));
         goto cleanup_wifi;
     }
 
+    ESP_LOGI(TAG, "Initializing Task Orchestrator...");
     ret = task_orchastrator_init();
     if (ret != ESP_OK)
     {
@@ -40,6 +46,7 @@ void app_main(void)
     return;
 
 cleanup_wifi:
+    ESP_LOGI(TAG, "Deinitializing wifi...");
     esp_err_t cleanup_ret = app_wifi_deinit();
     if (cleanup_ret != ESP_OK)
     {
@@ -47,6 +54,7 @@ cleanup_wifi:
         abort();
     }
 cleanup_queue:
+    ESP_LOGI(TAG, "Deinitializing queues...");
     queue_deinit();
 cleanup_none:
     abort();

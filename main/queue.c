@@ -17,67 +17,104 @@ QueueHandle_t queue_handle_metrics;
 
 esp_err_t queue_init(void)
 {
+    ESP_LOGI(TAG, "Creating task orchastrator queue...");
     queue_handle_task_orchastrator = xQueueCreate(APP_CONFIG_QUEUE_SIZE_ITEMS, sizeof(message_t));
-    if (queue_handle_task_orchastrator == 0)
+    if (queue_handle_task_orchastrator == NULL)
     {
-        ESP_LOGE(TAG, "Failed to create task_return queue");
+        ESP_LOGE(TAG, "Failed to create task_orchastrator queue.");
         return ESP_FAIL;
     }
 
+    ESP_LOGI(TAG, "Creating card reader queue...");
     queue_handle_card_reader = xQueueCreate(APP_CONFIG_QUEUE_SIZE_ITEMS, sizeof(message_t));
-    if (queue_handle_card_reader == 0)
+    if (queue_handle_card_reader == NULL)
     {
-        ESP_LOGE(TAG, "Failed to create card_reader queue");
+        ESP_LOGE(TAG, "Failed to create card_reader queue.");
         return ESP_FAIL;
     }
 
+    ESP_LOGI(TAG, "Creating buzzer queue...");
     queue_handle_buzzer = xQueueCreate(APP_CONFIG_QUEUE_SIZE_ITEMS, sizeof(message_t));
-    if (queue_handle_buzzer == 0)
+    if (queue_handle_buzzer == NULL)
     {
-        ESP_LOGE(TAG, "Failed to create buzzer queue");
+        ESP_LOGE(TAG, "Failed to create buzzer queue.");
         return ESP_FAIL;
     }
 
+    ESP_LOGI(TAG, "Creating accelerometer queue...");
     queue_handle_accelerometer = xQueueCreate(APP_CONFIG_QUEUE_SIZE_ITEMS, sizeof(message_t));
-    if (queue_handle_accelerometer == 0)
+    if (queue_handle_accelerometer == NULL)
     {
-        ESP_LOGE(TAG, "Failed to create accelerometer queue");
+        ESP_LOGE(TAG, "Failed to create accelerometer queue.");
         return ESP_FAIL;
     }
 
+    ESP_LOGI(TAG, "Creating time of flight queue...");
     queue_handle_time_of_flight = xQueueCreate(APP_CONFIG_QUEUE_SIZE_ITEMS, sizeof(message_t));
-    if (queue_handle_time_of_flight == 0)
+    if (queue_handle_time_of_flight == NULL)
     {
-        ESP_LOGE(TAG, "Failed to create time of flight queue");
+        ESP_LOGE(TAG, "Failed to create time of flight queue.");
         return ESP_FAIL;
     }
 
+    ESP_LOGI(TAG, "Creating metric queue...");
     queue_handle_metrics = xQueueCreate(APP_CONFIG_QUEUE_SIZE_ITEMS, sizeof(metric_t));
-    if (queue_handle_metrics == 0)
+    if (queue_handle_metrics == NULL)
     {
-        ESP_LOGE(TAG, "Failed to create metric queue");
+        ESP_LOGE(TAG, "Failed to create metric queue.");
         return ESP_FAIL;
     }
 
     return ESP_OK;
+
+cleanup_time_of_flight:
+    ESP_LOGI(TAG, "Deleting time of flight queue...");
+    vQueueDelete(queue_handle_time_of_flight);
+    queue_handle_time_of_flight = NULL;
+    ESP_LOGI(TAG, "Deleting accelerometer queue...");
+    vQueueDelete(queue_handle_accelerometer);
+    queue_handle_accelerometer = NULL;
+cleanup_buzzer:
+    ESP_LOGI(TAG, "Deleting buzzer queue...");
+    vQueueDelete(queue_handle_buzzer);
+    queue_handle_buzzer = NULL;
+cleanup_card_reader:
+    ESP_LOGI(TAG, "Deleting card reader queue...");
+    vQueueDelete(queue_handle_card_reader);
+    queue_handle_card_reader = NULL;
+cleanup_task_orchastrator:
+    ESP_LOGI(TAG, "Deleting task orchastrator queue...");
+    vQueueDelete(queue_handle_task_orchastrator);
+    queue_handle_task_orchastrator = NULL;
+cleanup_none:
+    return ESP_FAIL;
 }
 
 void queue_deinit(void)
 {
-    vQueueDelete(queue_handle_task_orchastrator);
-    queue_handle_task_orchastrator = NULL;
+    ESP_LOGI(TAG, "Deleting metrics queue...");
+    vQueueDelete(queue_handle_metrics);
+    queue_handle_metrics = NULL;
 
-    vQueueDelete(queue_handle_card_reader);
-    queue_handle_card_reader = NULL;
+    ESP_LOGI(TAG, "Deleting time of flight queue...");
+    vQueueDelete(queue_handle_time_of_flight);
+    queue_handle_time_of_flight = NULL;
 
-    vQueueDelete(queue_handle_buzzer);
-    queue_handle_buzzer = NULL;
-
+    ESP_LOGI(TAG, "Deleting accelerometer queue...");
     vQueueDelete(queue_handle_accelerometer);
     queue_handle_accelerometer = NULL;
 
-    vQueueDelete(queue_handle_metrics);
-    queue_handle_metrics = NULL;
+    ESP_LOGI(TAG, "Deleting buzzer queue...");
+    vQueueDelete(queue_handle_buzzer);
+    queue_handle_buzzer = NULL;
+
+    ESP_LOGI(TAG, "Deleting card reader queue...");
+    vQueueDelete(queue_handle_card_reader);
+    queue_handle_card_reader = NULL;
+
+    ESP_LOGI(TAG, "Deleting task orchastrator queue...");
+    vQueueDelete(queue_handle_task_orchastrator);
+    queue_handle_task_orchastrator = NULL;
 }
 
 const char *queue_message_type_to_name(message_type_t type)
