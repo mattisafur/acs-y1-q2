@@ -15,7 +15,7 @@
 
 static const char *TAG = "metrics publisher";
 
-#define METRICS_PUBLISHER_ENDPOINT_URL "http://4.233.137.69/metrics"
+#define METRICS_PUBLISHER_ENDPOINT_URL "http://4.233.137.69/ingest/metrics"
 
 static TaskHandle_t task_handle;
 
@@ -94,29 +94,44 @@ static void metrics_publisher_handler(void *)
         xQueueReceive(queue_handle_metrics, &msg, portMAX_DELAY);
 
         cJSON *metric_json = metric_to_cjson(&msg);
-
         char *metric_json_string = cJSON_Print(metric_json);
-        esp_http_client_set_header(http_client_handle, "Content-Type", "application/json");
-        esp_http_client_set_post_field(http_client_handle, metric_json_string, strlen(metric_json_string));
-        esp_err_t ret = esp_http_client_perform(http_client_handle);
+
+        esp_err_t ret = esp_http_client_set_header(http_client_handle, "Content-Type", "application/json");
         if (ret != ESP_OK)
         {
-            ESP_LOGE(TAG, "Failed to perform POST request: %s. conetnt: %s", esp_err_to_name(ret), metric_json);
+            ESP_LOGE(TAG, "Failed to set http client header: %s", esp_err_to_name(ret));
         }
 
+        ret = esp_http_client_set_post_field(http_client_handle, metric_json_string, strlen(metric_json_string));
+        if (ret != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Failed to set http client post field: %s", esp_err_to_name(ret));
+        }
+
+        ret = esp_http_client_perform(http_client_handle);
+        if (ret != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Failed to perform POST request: %s.", esp_err_to_name(ret));
+        }
+
+        free(metric_json_string);
         cJSON_free(metric_json);
     }
 }
 
-static esp_err_t http_event_handler(esp_http_client_event_t *event) { return ESP_OK; }
+static esp_err_t http_event_handler(esp_http_client_event_t *event)
+{
+
+    return ESP_OK;
+}
 
 esp_err_t metrics_publisher_init(void)
 {
     esp_err_t esp_ret;
     esp_http_client_config_t http_client_config = {
         .url = METRICS_PUBLISHER_ENDPOINT_URL,
-        .event_handler = http_event_handler,
         .method = HTTP_METHOD_POST,
+        .event_handler = http_event_handler,
     };
     http_client_handle = esp_http_client_init(&http_client_config);
     if (http_client_handle == NULL)
