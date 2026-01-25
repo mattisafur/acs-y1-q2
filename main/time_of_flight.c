@@ -177,7 +177,7 @@ esp_err_t time_of_flight_init(void)
     return ESP_OK;
 
 cleanup_start:
-    ESP_LOGD(TAG, "cleanup: stopping sensor...");
+    ESP_LOGD(TAG, "Stopping sensor...");
     cleanup_ret = vl53l1x_stop(&device_descriptor);
     if (cleanup_ret != ESP_OK)
     {
@@ -185,7 +185,7 @@ cleanup_start:
         abort();
     }
 cleanup_device_descriptor:
-    ESP_LOGD(TAG, "cleanup: deinitializing device...");
+    ESP_LOGD(TAG, "Deinitializing device...");
     cleanup_ret = vl53l1x_deinit(&device_descriptor);
     if (cleanup_ret != ESP_OK)
     {
@@ -203,6 +203,7 @@ esp_err_t time_of_flight_deinit(void)
     vTaskDelete(task_handle);
     task_handle = NULL;
 
+    ESP_LOGI(TAG, "Stopping sensor...");
     ret = vl53l1x_stop(&device_descriptor);
     if (ret != ESP_OK)
     {
@@ -210,6 +211,7 @@ esp_err_t time_of_flight_deinit(void)
         return ret;
     }
 
+    ESP_LOGI(TAG, "Deinitializing device...");
     ret = vl53l1x_deinit(&device_descriptor);
     if (ret != ESP_OK)
     {

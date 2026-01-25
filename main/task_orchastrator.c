@@ -181,6 +181,7 @@ esp_err_t task_orchastrator_init(void)
     return ESP_OK;
 
 cleanup_metrics_publisher:
+    ESP_LOGI(TAG, "Deinitializing metrics publisher...");
     cleanup_ret = metrics_publisher_deinit();
     if (cleanup_ret != ESP_OK)
     {
@@ -188,6 +189,7 @@ cleanup_metrics_publisher:
         abort();
     }
 cleanup_time_of_flight:
+    ESP_LOGI(TAG, "Deinitializing time of flight...");
     cleanup_ret = time_of_flight_deinit();
     if (cleanup_ret != ESP_OK)
     {
@@ -195,6 +197,7 @@ cleanup_time_of_flight:
         abort();
     }
 cleanup_card_reader:
+    ESP_LOGI(TAG, "Deinitializing card reader...");
     cleanup_ret = card_reader_deinit();
     if (cleanup_ret != ESP_OK)
     {
@@ -202,6 +205,7 @@ cleanup_card_reader:
         abort();
     }
 cleanup_buzzer:
+    ESP_LOGI(TAG, "Deinitializing buzzer...");
     cleanup_ret = buzzer_deinit();
     if (cleanup_ret != ESP_OK)
     {
@@ -209,6 +213,7 @@ cleanup_buzzer:
         abort();
     }
 cleanup_accelerometer:
+    ESP_LOGI(TAG, "Deinitializing accelerometer...");
     cleanup_ret = accelerometer_deinit();
     if (cleanup_ret != ESP_OK)
     {

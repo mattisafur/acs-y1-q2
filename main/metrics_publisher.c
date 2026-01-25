@@ -127,6 +127,7 @@ esp_err_t metrics_publisher_init(void)
     BaseType_t rtos_ret;
     esp_err_t cleanup_ret;
 
+    ESP_LOGI(TAG, "Initializing HTTP client...");
     esp_http_client_config_t http_client_config = {
         .url = METRICS_PUBLISHER_ENDPOINT_URL,
         .method = HTTP_METHOD_POST,
@@ -139,6 +140,7 @@ esp_err_t metrics_publisher_init(void)
         goto cleanup_none;
     }
 
+    ESP_LOGI(TAG, "Creating task...");
     rtos_ret = xTaskCreate(metrics_publisher_handler, "Metrics publisher", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {
@@ -150,6 +152,7 @@ esp_err_t metrics_publisher_init(void)
     return ESP_OK;
 
 cleanup_http_client:
+    ESP_LOGI(TAG, "Cleaning up HTTP client...");
     cleanup_ret = esp_http_client_cleanup(http_client_handle);
     if (cleanup_ret != ESP_OK)
     {
@@ -164,6 +167,7 @@ esp_err_t metrics_publisher_deinit(void)
 {
     esp_err_t ret;
 
+    ESP_LOGI(TAG, "Cleaning up HTTP client...");
     ret = esp_http_client_cleanup(http_client_handle);
     if (ret != ESP_OK)
     {

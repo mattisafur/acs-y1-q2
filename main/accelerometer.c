@@ -213,6 +213,7 @@ esp_err_t accelerometer_init(void)
     return ESP_OK;
 
 cleanup_device_descriptor:
+    ESP_LOGI(TAG, "Freeing device descriptor...");
     cleanup_ret = mpu6050_free_desc(&device_descriptor);
     if (cleanup_ret != ESP_OK)
     {
@@ -227,9 +228,11 @@ esp_err_t accelerometer_deinit(void)
 {
     esp_err_t ret;
 
+    ESP_LOGI(TAG, "Deleting task...");
     vTaskDelete(task_handle);
     task_handle = NULL;
 
+    ESP_LOGI(TAG, "Freeing device descriptor...");
     ret = mpu6050_free_desc(&device_descriptor);
     if (ret != ESP_OK)
     {
