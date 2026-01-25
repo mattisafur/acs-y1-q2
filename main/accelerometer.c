@@ -52,6 +52,7 @@ static void accelerometer_task_handler(void *)
 
         if (ret == pdTRUE)
         {
+            ESP_LOGD(TAG, "Received message type \"%s\" from component \"%s\"", queue_message_type_to_name(message.type), queue_component_to_name(message.component));
             switch (message.type)
             {
             case MESSAGE_TYPE_ENABLE:

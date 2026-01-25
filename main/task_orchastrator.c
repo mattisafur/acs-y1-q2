@@ -28,7 +28,7 @@ static void task_orchastrator_handler(void *)
     {
         message_t incoming_message;
         BaseType_t ret = xQueueReceive(queue_handle_task_orchastrator, &incoming_message, portMAX_DELAY);
-        ESP_LOGD(TAG, "Received message \"%s\" from component \"%s\"", queue_message_type_to_name(incoming_message.type), queue_component_to_name(incoming_message.component));
+        ESP_LOGD(TAG, "Received message type \"%s\" from component \"%s\"", queue_message_type_to_name(incoming_message.type), queue_component_to_name(incoming_message.component));
 
         message_t outgoing_message = {
             .component = COMPONENT_TASK_ORCHASTRATOR,
@@ -36,6 +36,7 @@ static void task_orchastrator_handler(void *)
         switch (incoming_message.type)
         {
         case MESSAGE_TYPE_SENSOR_TRIGGERED:
+            ESP_LOGD(TAG, "Starting alarm...");
             outgoing_message.type = MESSAGE_TYPE_BUZZER_ALARM_START;
             ret = xQueueSendToBack(queue_handle_buzzer, &outgoing_message, portMAX_DELAY);
             if (ret != pdTRUE)

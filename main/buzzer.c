@@ -52,6 +52,7 @@ static void buzzer_task_handler(void *)
     {
         message_t incoming_message;
         xQueueReceive(queue_handle_buzzer, &incoming_message, portMAX_DELAY);
+        ESP_LOGD(TAG, "Received message type \"%s\" from component \"%s\"", queue_message_type_to_name(incoming_message.type), queue_component_to_name(incoming_message.component));
 
         alarm_queue_message_t outgoing_message;
         switch (incoming_message.type)
@@ -136,6 +137,7 @@ static void alarm_task_handler(void *)
 
         if (ret == pdTRUE)
         {
+            ESP_LOGD(TAG, "Received alarm message \"%s\"", alarm_queue_message_to_name(message));
             switch (message)
             {
             case ALARM_QUEUE_MESSAGE_START:

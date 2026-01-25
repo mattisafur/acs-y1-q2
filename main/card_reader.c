@@ -26,7 +26,6 @@ static void card_reader_task_handler(void *)
     bool valid = false;
     for (;;)
     {
-
         uint8_t uid[12] = {0};
         size_t uid_len = sizeof(uid);
 

@@ -32,36 +32,38 @@ static vl53l1x_t device_descriptor;
  */
 static void time_of_flight_handler(void *)
 {
-    bool tof_enabled = true;
+    bool enabled = true;
     for (;;)
     {
         message_t message;
         BaseType_t esp_ret = xQueueReceive(queue_handle_time_of_flight, &message, 0);
         if (esp_ret == pdTRUE)
         {
+            ESP_LOGD(TAG, "Received message type \"%s\" from component \"%s\"", queue_metric_type_to_name(message.type), queue_metric_type_to_name(message.component));
             switch (message.type)
             {
             case MESSAGE_TYPE_ENABLE:
-                tof_enabled = true;
+                enabled = true;
+                ESP_LOGD(TAG, "Set enabled flag to true.");
                 break;
             case MESSAGE_TYPE_DISABLE:
-                tof_enabled = false;
+                enabled = false;
+                ESP_LOGD(TAG, "Set enabled flag to false.");
                 break;
-
             default:
                 ESP_LOGE(TAG, "Received invalid message from queue, message num: %d", message);
                 break;
             }
         }
-        if (tof_enabled)
+        if (enabled)
         {
             vl53l1x_result_t read = {0};
-            esp_err_t tof_err = vl53l1x_read(&device_descriptor, &read, 200);
-            if (tof_err == ESP_OK)
+            esp_err_t ret = vl53l1x_read(&device_descriptor, &read, 200);
+            if (ret == ESP_OK)
             {
                 if (read.status != 0)
                 {
-                    ESP_LOGE(TAG, "Failed to read measurements: %s", esp_err_to_name(tof_err));
+                    ESP_LOGE(TAG, "Failed to read measurements with result status: %d", read.status);
                     continue;
                 }
 
@@ -81,6 +83,10 @@ static void time_of_flight_handler(void *)
 
                     xQueueSendToBack(queue_handle_metrics, &metric_tof_distance, 0);
                 }
+            }
+            else
+            {
+                ESP_LOGE(TAG, "Failed to read measurement: %s", esp_err_to_name(ret));
             }
         }
         vTaskDelay(pdMS_TO_TICKS(100));
