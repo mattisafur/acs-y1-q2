@@ -54,7 +54,7 @@ static void wifi_event_handler(void *, esp_event_base_t event_base, int32_t even
 
         ESP_LOGW(TAG, "Disconnected from wifi, reconnecting...");
         ESP_LOGD(TAG, "Reconnecting to wifi...");
-        esp_wifi_connect();
+        ret = esp_wifi_connect();
         if (ret != ESP_OK)
         {
             ESP_LOGE(TAG, "Failed calling esp_wifi_connect: %s", esp_err_to_name(ret));
