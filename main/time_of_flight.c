@@ -74,15 +74,14 @@ static void time_of_flight_handler(void *)
                         .type = MESSAGE_TYPE_SENSOR_TRIGGERED,
                     };
                     xQueueSendToBack(queue_handle_task_orchastrator, &tof_message, portMAX_DELAY);
-
-                    const metric_t metric_tof_distance = {
-                        .metric_type = METRIC_TYPE_TIME_OF_FLIGHT_DISTANCE,
-                        .timestamp = time(NULL),
-                        .float_value = read.distance_mm,
-                    };
-
-                    xQueueSendToBack(queue_handle_metrics, &metric_tof_distance, 0);
                 }
+
+                const metric_t metric_tof_distance = {
+                    .metric_type = METRIC_TYPE_TIME_OF_FLIGHT_DISTANCE,
+                    .timestamp = time(NULL),
+                    .uint16_value = read.distance_mm,
+                };
+                xQueueSendToBack(queue_handle_metrics, &metric_tof_distance, 0);
             }
             else
             {
