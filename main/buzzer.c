@@ -39,6 +39,12 @@ static const char *alarm_queue_message_to_name(alarm_queue_message_t message)
     }
 }
 
+static void log_gpio_set_level(esp_err_t ret)
+{
+    if (ret != ESP_OK)
+        ESP_LOGE(TAG, "Failed to set gpio level: %s", esp_err_to_name(ret));
+}
+
 /**
  * @brief Task handler for buzzer control.
  * Processes messages from the buzzer queue and controls the alarm.
@@ -76,9 +82,9 @@ static void buzzer_task_handler(void *)
                 xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
             }
 
-            gpio_set_level(PIN_BUZZER, 1);
+            log_gpio_set_level(gpio_set_level(PIN_BUZZER, 1));
             vTaskDelay(pdMS_TO_TICKS(150));
-            gpio_set_level(PIN_BUZZER, 0);
+            log_gpio_set_level(gpio_set_level(PIN_BUZZER, 0));
 
             if (alarm_running)
             {
@@ -94,17 +100,17 @@ static void buzzer_task_handler(void *)
                 xQueueSendToBack(alarm_queue_handle, &outgoing_message, portMAX_DELAY);
             }
 
-            gpio_set_level(PIN_BUZZER, 1);
+            log_gpio_set_level(gpio_set_level(PIN_BUZZER, 1));
             vTaskDelay(pdMS_TO_TICKS(50));
-            gpio_set_level(PIN_BUZZER, 0);
+            log_gpio_set_level(gpio_set_level(PIN_BUZZER, 0));
             vTaskDelay(pdMS_TO_TICKS(50));
-            gpio_set_level(PIN_BUZZER, 1);
+            log_gpio_set_level(gpio_set_level(PIN_BUZZER, 1));
             vTaskDelay(pdMS_TO_TICKS(50));
-            gpio_set_level(PIN_BUZZER, 0);
+            log_gpio_set_level(gpio_set_level(PIN_BUZZER, 0));
             vTaskDelay(pdMS_TO_TICKS(50));
-            gpio_set_level(PIN_BUZZER, 1);
+            log_gpio_set_level(gpio_set_level(PIN_BUZZER, 1));
             vTaskDelay(pdMS_TO_TICKS(50));
-            gpio_set_level(PIN_BUZZER, 0);
+            log_gpio_set_level(gpio_set_level(PIN_BUZZER, 0));
             vTaskDelay(pdMS_TO_TICKS(50));
 
             if (alarm_running)
@@ -148,7 +154,7 @@ static void alarm_task_handler(void *)
                 enabled = false;
                 if (ret == pdTRUE)
                 {
-                    gpio_set_level(PIN_BUZZER, 0);
+                    log_gpio_set_level(gpio_set_level(PIN_BUZZER, 0));
                     vTaskDelay(pdMS_TO_TICKS(50));
                 }
                 break;
@@ -164,9 +170,9 @@ static void alarm_task_handler(void *)
 
         if (enabled)
         {
-            gpio_set_level(PIN_BUZZER, 1);
+            log_gpio_set_level(gpio_set_level(PIN_BUZZER, 1));
             vTaskDelay(pdMS_TO_TICKS(50));
-            gpio_set_level(PIN_BUZZER, 0);
+            log_gpio_set_level(gpio_set_level(PIN_BUZZER, 0));
             vTaskDelay(pdMS_TO_TICKS(100));
         }
         else

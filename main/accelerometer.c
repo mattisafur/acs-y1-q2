@@ -44,22 +44,27 @@ static float vec3_sum(float x, float y, float z) { return sqrt(pow(x, 2) + pow(y
  */
 static void accelerometer_task_handler(void *)
 {
+    esp_err_t esp_ret;
+    BaseType_t rtos_ret;
+
     bool enabled = true;
     for (;;)
     {
         message_t message;
-        BaseType_t ret = xQueueReceive(queue_handle_accelerometer, &message, 0);
+        rtos_ret = xQueueReceive(queue_handle_accelerometer, &message, 0);
 
-        if (ret == pdTRUE)
+        if (rtos_ret == pdTRUE)
         {
             ESP_LOGD(TAG, "Received message type \"%s\" from component \"%s\"", queue_message_type_to_name(message.type), queue_component_to_name(message.component));
             switch (message.type)
             {
             case MESSAGE_TYPE_ENABLE:
+                ESP_LOGD(TAG, "Set enabled flag to true.");
                 enabled = true;
                 break;
 
             case MESSAGE_TYPE_DISABLE:
+                ESP_LOGD(TAG, "Set enabled flag to false.");
                 enabled = false;
                 break;
 
@@ -74,18 +79,15 @@ static void accelerometer_task_handler(void *)
             mpu6050_acceleration_t acceleration;
             mpu6050_rotation_t rotation;
 
-            ret = mpu6050_get_motion(&device_descriptor, &acceleration, &rotation);
-            if (ret != ESP_OK)
+            esp_ret = mpu6050_get_motion(&device_descriptor, &acceleration, &rotation);
+            if (esp_ret != ESP_OK)
             {
-                ESP_LOGE(TAG, "Failed to get motion: %s", esp_err_to_name(ret));
+                ESP_LOGE(TAG, "Failed to get motion: %s", esp_err_to_name(esp_ret));
                 // do anything else?
             }
 
             const float acceleration_sum = vec3_sum(acceleration.x, acceleration.y, acceleration.z);
             const float rotation_sum = vec3_sum(rotation.x, rotation.y, rotation.z);
-
-            ESP_LOGD(TAG, "Acceleration sum: %.2f", acceleration_sum);
-            ESP_LOGD(TAG, "Rotation sum: %.2f", rotation_sum);
 
             if (acceleration_sum > ACCELERATION_THREASHOLD_ACCELERATION || rotation_sum > ACCELERATION_THREASHOLD_ROTATION)
             {
@@ -155,7 +157,7 @@ esp_err_t accelerometer_init(void)
     BaseType_t rtos_ret;
     esp_err_t cleanup_ret;
 
-    ESP_LOGD(TAG, "Intializing i2cdev...");
+    ESP_LOGI(TAG, "Intializing i2cdev...");
     esp_ret = i2cdev_init();
     if (esp_ret != ESP_OK)
     {
@@ -163,7 +165,7 @@ esp_err_t accelerometer_init(void)
         goto cleanup_nothing;
     }
 
-    ESP_LOGD(TAG, "Initializing device descriptor...");
+    ESP_LOGI(TAG, "Initializing device descriptor...");
     esp_ret = mpu6050_init_desc(&device_descriptor, ACCELEROMETER_I2C_ADDR, ACCELEROMETER_I2C_PORT_NUM, ACCELEROMETER_I2C_GPIO_SDA, ACCELEROMETER_I2C_GPIO_SCL);
     if (esp_ret != ESP_OK)
     {
@@ -174,11 +176,11 @@ esp_err_t accelerometer_init(void)
     unsigned int failed_tries = 0;
     for (;;)
     {
-        ESP_LOGD(TAG, "Probing for device...");
+        ESP_LOGI(TAG, "Probing for device...");
         esp_ret = i2c_dev_probe(&device_descriptor.i2c_dev, I2C_DEV_WRITE);
         if (esp_ret == ESP_OK)
         {
-            ESP_LOGD(TAG, "Device probed successfully");
+            ESP_LOGD(TAG, "Device probed");
             break;
         }
 
@@ -194,7 +196,7 @@ esp_err_t accelerometer_init(void)
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 
-    ESP_LOGD(TAG, "Initializing initializing device...");
+    ESP_LOGI(TAG, "Initializing device...");
     esp_ret = mpu6050_init(&device_descriptor);
     if (esp_ret != ESP_OK)
     {
@@ -202,7 +204,7 @@ esp_err_t accelerometer_init(void)
         goto cleanup_device_descriptor;
     }
 
-    ESP_LOGD(TAG, "Initializing accelerometer freertos task...");
+    ESP_LOGI(TAG, "Initializing task...");
     rtos_ret = xTaskCreate(accelerometer_task_handler, "Accelerometer", APP_CONFIG_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY, &task_handle);
     if (rtos_ret != pdPASS)
     {

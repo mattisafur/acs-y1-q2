@@ -23,6 +23,8 @@ static TaskHandle_t task_handle;
 
 static void card_reader_task_handler(void *)
 {
+    BaseType_t rtos_ret;
+
     bool valid = false;
     for (;;)
     {
@@ -48,10 +50,10 @@ static void card_reader_task_handler(void *)
                         .component = COMPONENT_CARD_READER,
                         .type = valid ? MESSAGE_TYPE_CARD_READER_CARD_VALID : MESSAGE_TYPE_CARD_READER_CARD_INVALID,
                     };
-                    BaseType_t q_ret = xQueueSendToBack(queue_handle_task_orchastrator, &tx_msg, 0);
-                    if (q_ret != pdTRUE)
+                    rtos_ret = xQueueSendToBack(queue_handle_task_orchastrator, &tx_msg, 0);
+                    if (rtos_ret != pdTRUE)
                     {
-                        ESP_LOGE(TAG, "Failed to send card read result to queue with error code: %d", q_ret);
+                        ESP_LOGE(TAG, "Failed to send card read result to queue with error code: %d", rtos_ret);
                     }
 
                     metric_t metric_card_reader_valid = {
@@ -70,10 +72,10 @@ static void card_reader_task_handler(void *)
                         .component = COMPONENT_CARD_READER,
                         .type = valid ? MESSAGE_TYPE_CARD_READER_CARD_VALID : MESSAGE_TYPE_CARD_READER_CARD_INVALID,
                     };
-                    BaseType_t q_ret = xQueueSendToBack(queue_handle_task_orchastrator, &tx_msg, 0);
-                    if (q_ret != pdPASS)
+                    rtos_ret = xQueueSendToBack(queue_handle_task_orchastrator, &tx_msg, 0);
+                    if (rtos_ret != pdPASS)
                     {
-                        ESP_LOGE(TAG, "Failed to send card read result to queue with error code: %d", q_ret);
+                        ESP_LOGE(TAG, "Failed to send card read result to queue with error code: %d", rtos_ret);
                     }
 
                     metric_t metric_card_reader_valid = {

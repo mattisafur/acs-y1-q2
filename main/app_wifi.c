@@ -11,8 +11,8 @@
 
 static const char *TAG = "app wifi";
 
-#define WIFI_SSID "AndrejHotspot"
-#define WIFI_PASSWORD "azbm3134"
+#define APP_WIFI_SSID "AndrejHotspot"
+#define APP_WIFI_PASSWORD "azbm3134"
 
 #define APP_WIFI_BIT_CONNECTED BIT0
 #define APP_WIFI_BIT_FAIL BIT1
@@ -25,6 +25,8 @@ static esp_event_handler_instance_t ip_event_handler_instance;
 
 static void wifi_event_handler(void *, esp_event_base_t event_base, int32_t event_id, void *)
 {
+    esp_err_t ret;
+
     static unsigned int reconnect_count = 0;
 
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
@@ -32,7 +34,11 @@ static void wifi_event_handler(void *, esp_event_base_t event_base, int32_t even
         ESP_LOGD(TAG, "Received wifi start event.");
 
         ESP_LOGD(TAG, "Connecting to wifi...");
-        esp_wifi_connect();
+        ret = esp_wifi_connect();
+        if (ret != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Failed calling esp_wifi_connect: %s", esp_err_to_name(ret));
+        }
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
@@ -49,6 +55,10 @@ static void wifi_event_handler(void *, esp_event_base_t event_base, int32_t even
         ESP_LOGW(TAG, "Disconnected from wifi, reconnecting...");
         ESP_LOGD(TAG, "Reconnecting to wifi...");
         esp_wifi_connect();
+        if (ret != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Failed calling esp_wifi_connect: %s", esp_err_to_name(ret));
+        }
         reconnect_count++;
     }
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
