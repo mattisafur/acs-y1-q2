@@ -205,6 +205,7 @@ esp_err_t time_of_flight_deinit(void)
 {
     esp_err_t ret;
 
+    ESP_LOGI(TAG, "Deleting task...");
     vTaskDelete(task_handle);
     task_handle = NULL;
 
