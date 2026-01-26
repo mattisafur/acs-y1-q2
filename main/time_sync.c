@@ -38,7 +38,7 @@ esp_err_t time_sync_init(void)
 
     ESP_LOGI(TAG, "Setting time servers...");
     esp_sntp_setservername(0, "pool.ntp.org");
-    esp_sntp_setservername(2, "time.google.com");
+    esp_sntp_setservername(1, "time.google.com");
 
     ESP_LOGI(TAG, "Initializing SNTP...");
     esp_sntp_init();
